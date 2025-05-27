@@ -1,0 +1,74 @@
+graph TD
+    subgraph "Control Layer"
+        PRESET[Preset Manager<br/>Bark/Howl/Whine/etc]
+        PARAMS[Parameter Controls<br/>Sliders & Values]
+        ENVCTRL[Envelope Controls<br/>ADSR x4]
+    end
+    
+    subgraph "Source Generation"
+        LF[LF Glottal Model<br/>Rd, Ra, Rk, Rg]
+        JITTER[Jitter/Shimmer<br/>Generator]
+        NOISE[Noise Generator<br/>Pink/Turbulence]
+    end
+    
+    subgraph "Vocal Tract"
+        WG[Digital Waveguide<br/>16 sections]
+        TRACT[Tract Shape<br/>Controller]
+        SCATTER[Scattering<br/>Junctions]
+    end
+    
+    subgraph "Filtering"
+        FORMANT[Formant Filter Bank<br/>F1-F4 Resonators]
+        NASAL[Nasal Coupling<br/>Anti-formants]
+        RADIATION[Lip Radiation<br/>Model]
+    end
+    
+    subgraph "Modulation"
+        AMPENV[Amplitude<br/>ADSR]
+        PITCHENV[Pitch<br/>ADSR]
+        FILTENV[Filter<br/>ADSR]
+        BREATHENV[Breath<br/>ADSR]
+    end
+    
+    subgraph "Output"
+        MIX[Mixer]
+        GAIN[Master Gain]
+        OUT[Audio Output]
+    end
+    
+    %% Control connections
+    PRESET --> PARAMS
+    PARAMS --> LF
+    PARAMS --> TRACT
+    PARAMS --> FORMANT
+    ENVCTRL --> AMPENV
+    ENVCTRL --> PITCHENV
+    ENVCTRL --> FILTENV
+    ENVCTRL --> BREATHENV
+    
+    %% Audio signal flow
+    LF --> |Glottal Pulses| WG
+    JITTER --> |Modulation| LF
+    WG --> |Vocal Tract Output| FORMANT
+    TRACT --> |Shape Control| WG
+    SCATTER --> |Reflections| WG
+    FORMANT --> |Filtered Signal| MIX
+    NASAL --> |Coupling| FORMANT
+    RADIATION --> |HF Emphasis| FORMANT
+    NOISE --> |Breathiness| MIX
+    
+    %% Envelope connections
+    PITCHENV --> |Pitch Mod| LF
+    FILTENV --> |Cutoff Mod| FORMANT
+    BREATHENV --> |Intensity| NOISE
+    AMPENV --> |Volume| MIX
+    
+    %% Final output
+    MIX --> GAIN
+    GAIN --> OUT
+    
+    style LF fill:#ff9999
+    style WG fill:#99ccff
+    style FORMANT fill:#99ff99
+    style MIX fill:#ffcc99
+    style PRESET fill:#ff99ff

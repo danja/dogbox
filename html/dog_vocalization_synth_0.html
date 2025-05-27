@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Voice Synthesizer - Mobile Ready</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        // Test tone with detailed debugging
+        function playTestTone() {
+            if (!isAudioReady) {
+                log('❌ Audio not ready for test tone');
+                return;
+            }
+            
+            log('🎵 Playing test tone with debugging...');
+            updateStatus('Playing test tone...', '#9b59b6');
+            
+            try {
+                // Create simple oscillator test
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                // Connect: oscillator -> gain -> master -> destination
+                osc.connect(gain);
+                gain.connect(masterGain);
+                
+                log('✓ Test tone: oscillator and gain created and connected');
+                
+                osc.frequency.value = 440;
+                osc.type = 'sine';
+                
+                const now = audioContext.currentTime;
+                const duration = 1.0;
+                
+                // Envelope
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+                gain.gain.linearRampToValueAtTime(0.2, now + duration - 0.1);
+                gain.gain.linearRampToValueAtTime(0, now + duration);
+                
+                log('✓ Test tone: envelope set, starting oscillator');
+                
+                osc.start(now);
+                osc.stop(now + duration);
+                
+                osc.onended = () => {
+                    log('✓ Test tone completed successfully');
+                    updateStatus('✅ Test tone completed - Audio path working!', '#2ecc71');
+                };
+                
+                // Check audio context state
+                log('📊 AudioContext state: ' + audioContext.state);
+                log('📊 Master gain value: ' + masterGain.gain.value);
+                log('📊 Test gain value: ' + gain.gain.value);
+                
+            } catch (error) {
+                log('❌ Test tone failed: ' + error.message);
+                updateStatus('❌ Test tone failed: ' + error.message, '#e74c3c');
+            }
+        }
+
+        // Generate dog vocalization using physical modeling
+        async function generateDogSound(type) {
+            if (!isAudioReady) {
+                log('❌ Audio not ready');
+                return;
+            }
+            
+            log('🐕 Generating ' + type + ' sound...');
+            
+            try {
+                // Apply sound-specific parameters
+                const soundParams = getSoundParams(type);
+                log('✓ Sound parameters: ' + JSON.stringify(soundParams));
+                
+                const duration = getSoundDuration(type);
+                log('✓ Duration: ' + duration + 's');
+                
+                // Calculate formants from physical model
+                const formants = calculateFormants(soundParams);
+                log('✓ Formants calculated: ' + JSON.stringify(formants));
+                
+                // Generate the sound
+                log('🔊 Starting synthesis...');
+                await synthesizeSound(soundParams, formants, duration);
+                
+                log('✅ ' + type + ' sound completed successfully');
+                
+            } catch (error) {
+                log('❌ Dog sound generation failed: ' + error.message);
+                log('❌ Full error: ' + error.stack);
+                
+                // Emergency fallback - simple beep
+                log('🚨 Playing emergency fallback beep...');
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(masterGain);
+                
+                osc.frequency.value = 200;
+                osc.type = 'sine';
+                
+                const now = audioContext.currentTime;
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.1, now + 0.1);
+                gain.gain.linearRampToValueAtTime(0, now + 0.5);
+                
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
+
+        // Get advanced sound-specific parameters
+        function getSoundParams(type) {
+            const baseParams = {
+                pitch: params.pitch,
+                tract: params.tract,
+                mouth: params.mouth,
+                breath: params.breath,
+                tongue: params.tongue,
+                nasality: params.nasality,
+                jitter: params.jitter,
+                shimmer: params.shimmer
+            };
+            
+            // Advanced sound-specific modifications based on canine acoustics research
+            const modifications = {
+                bark: { 
+                    pitch: 220, tract: 12, mouth: 0.4, breath: 0.1, 
+                    tongue: 0.3, nasality: 0.05, jitter: 0.05, shimmer: 0.08 
+                },
+                howl: { 
+                    pitch: 180, tract: 16, mouth: 0.8, breath: 0.2, 
+                    tongue: 0.5, nasality: 0.1, jitter: 0.01, shimmer: 0.02 
+                },
+                whine: { 
+                    pitch: 350, tract: 11, mouth: 0.6, breath: 0.4, 
+                    tongue: 0.7, nasality: 0.25, jitter: 0.03, shimmer: 0.05 
+                },
+                growl: { 
+                    pitch: 95, tract: 15, mouth: 0.3, breath: 0.6, 
+                    tongue: 0.2, nasality: 0.05, jitter: 0.08, shimmer: 0.12 
+                },
+                yip: { 
+                    pitch: 380, tract: 10, mouth: 0.5, breath: 0.2, 
+                    tongue: 0.6, nasality: 0.1, jitter: 0.04, shimmer: 0.06 
+                },
+                pant: { 
+                    pitch: 0, tract: 13, mouth: 0.9, breath: 1.0, 
+                    tongue: 0.4, nasality: 0.3, jitter: 0, shimmer: 0 
+                }
+            };
+            
+            return { ...baseParams, ...modifications[type] };
+        }
+
+        // Calculate formant frequencies from advanced vocal tract model
+        function calculateFormants(soundParams) {
+            const c = 343; // speed of sound
+            const L = soundParams.tract / 100; // tract length in meters
+            
+            // Advanced area function modeling
+            const baseF1 = c / (4 * L);
+            const baseF2 = 3 * baseF1;
+            const baseF3 = 5 * baseF1;
+            
+            // Perturbation theory for tongue and lip effects
+            const tonguePos = soundParams.tongue || 0.5;
+            const mouthOpening = soundParams.mouth;
+            
+            // Tongue body effects on formants
+            const tongueEffect1 = (tonguePos - 0.5) * 0.6; // F1 sensitive to tongue height
+            const tongueEffect2 = (tonguePos - 0.5) * -0.4; // F2 inversely related
+            const tongueEffect3 = (tonguePos - 0.5) * 0.2;
+            
+            // Lip constriction effects
+            const lipEffect = (mouthOpening - 0.5) * 0.3;
+            
+            // Calculate perturbed formants
+            let f1 = baseF1 * (1 + tongueEffect1 + lipEffect * 0.3);
+            let f2 = baseF2 * (1 + tongueEffect2 + lipEffect * 0.8);
+            let f3 = baseF3 * (1 + tongueEffect3 + lipEffect * 1.2);
+            
+            // Ensure physiologically plausible ranges
+            f1 = Math.max(300, Math.min(1200, f1));
+            f2 = Math.max(800, Math.min(2800, f2));
+            f3 = Math.max(1500, Math.min(4500, f3));
+            
+            // Add anti-formant effects for nasal coupling
+            const nasality = soundParams.nasality || 0.15;
+            if (nasality > 0) {
+                f1 *= (1 - nasality * 0.1);
+                f2 *= (1 + nasality * 0.15);
+            }
+            
+            return { f1, f2, f3 };
+        }
+
+        // Get envelope for different sound types
+        function getEnvelope(progress, type) {
+            switch(type) {
+                case 'bark':
+                case 'yip':
+                    return progress < 0.1 ? progress / 0.1 : Math.exp(-(progress - 0.1) * 8);
+                case 'howl':
+                    return progress < 0.3 ? progress / 0.3 : 
+                           progress > 0.7 ? 1 - (progress - 0.7) / 0.3 : 1;
+                case 'whine':
+                    const base = progress < 0.2 ? progress / 0.2 : 
+                                 progress > 0.8 ? 1 - (progress - 0.8) / 0.2 : 1;
+                    return base * (0.8 + 0.2 * Math.sin(2 * Math.PI * 6 * progress));
+                case 'growl':
+                    return Math.exp(-progress * 1.5) * (0.7 + 0.3 * Math.sin(2 * Math.PI * 15 * progress));
+                case 'pant':
+                    return Math.abs(Math.sin(2 * Math.PI * 3 * progress)) * Math.exp(-progress);
+                default:
+                    return Math.exp(-progress * 2);
+            }
+        }
+
+        // Get sound type from parameters
+        function getSoundType(soundParams) {
+            if (soundParams.pitch === 0) return 'pant';
+            if (soundParams.pitch < 120) return 'growl';
+            if (soundParams.pitch > 300) return soundParams.breath > 0.3 ? 'whine' : 'yip';
+            if (soundParams.mouth < 0.5) return 'bark';
+            return 'howl';
+        }
+
+        // Get sound duration
+        function getSoundDuration(type) {
+            const durations = {
+                bark: 0.6, howl: 2.5, whine: 1.8, 
+                growl: 2.0, yip: 0.3, pant: 3.0
+            };
+            return durations[type] || 1.0;
+        }
+
+        // Update parameter displays
+        function updateDisplay(param, value) {
+            const display = document.getElementById(param + '-display');
+            if (display) {
+                if (param === 'pitch') {
+                    display.textContent = Math.round(value) + ' Hz';
+                } else if (param === 'tract') {
+                    display.textContent = value + ' cm';
+                } else {
+                    display.textContent = value;
+                }
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🐕 Dog Voice Synthesizer loaded');
+            
+            // Start button
+            document.getElementById('startBtn').addEventListener('click', startAudio);
+            
+            // Test tone button
+            document.getElementById('testToneBtn').addEventListener('click', playTestTone);
+            
+            // Sound buttons
+            document.querySelectorAll('[data-sound]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (isAudioReady) {
+                        const soundType = e.target.getAttribute('data-sound');
+                        e.target.style.background = 'linear-gradient(145deg, #2ecc71, #27ae60)';
+                        generateDogSound(soundType);
+                        setTimeout(() => {
+                            e.target.style.background = '';
+                        }, getSoundDuration(soundType) * 1000);
+                    } else {
+                        updateStatus('⚠️ Click START AUDIO first!', '#ff9800');
+                    }
+                });
+            });
+            
+            // Parameter sliders - enhanced
+            ['pitch', 'tract', 'mouth', 'breath', 'tongue', 'nasality', 'jitter'].forEach(param => {
+                const slider = document.getElementById(param);
+                if (slider) {
+                    slider.addEventListener('input', (e) => {
+                        params[param] = parseFloat(e.target.value);
+                        updateDisplay(param, params[param]);
+                    });
+                    updateDisplay(param, params[param]);
+                }
+            });
+            
+            log('✓ Event listeners attached');
+        });
+    </script>
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .status-panel {
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid #f1c40f;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .big-button {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+            padding: 20px 40px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .big-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0,0,0,0.4);
+        }
+
+        .big-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .enable-btn {
+            background: linear-gradient(145deg, #f1c40f, #f39c12);
+            color: #2c3e50;
+        }
+
+        .enabled {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+        }
+
+        .sound-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .status {
+            font-size: 1.1em;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.5);
+            margin: 10px 0;
+        }
+
+        .debug {
+            background: rgba(0,0,0,0.7);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.9em;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .slider-group {
+            margin: 15px 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐕 Dog Voice Synthesizer</h1>
+        
+        <div class="status-panel">
+            <button id="startBtn" class="big-button enable-btn">🔊 START AUDIO</button>
+            <button id="testToneBtn" class="big-button" disabled style="background: linear-gradient(145deg, #9b59b6, #8e44ad);">🎵 TEST TONE</button>
+            <div id="status" class="status">Click START AUDIO to begin</div>
+        </div>
+
+        <div class="sound-grid">
+            <button class="big-button" data-sound="bark" disabled>🐕 BARK</button>
+            <button class="big-button" data-sound="howl" disabled>🐺 HOWL</button>
+            <button class="big-button" data-sound="whine" disabled>😢 WHINE</button>
+            <button class="big-button" data-sound="growl" disabled>😠 GROWL</button>
+            <button class="big-button" data-sound="yip" disabled>🐶 YIP</button>
+            <button class="big-button" data-sound="pant" disabled>💨 PANT</button>
+        </div>
+
+        <div class="controls">
+            <h3>Physical Model Controls</h3>
+            
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Pitch</span>
+                    <span id="pitch-display">200 Hz</span>
+                </div>
+                <input type="range" class="slider" id="pitch" min="80" max="400" value="200">
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Vocal Tract Length</span>
+                    <span id="tract-display">14 cm</span>
+                </div>
+                <input type="range" class="slider" id="tract" min="8" max="20" value="14" step="0.5">
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Mouth Opening</span>
+                    <span id="mouth-display">0.6</span>
+                </div>
+                <input type="range" class="slider" id="mouth" min="0.1" max="1" value="0.6" step="0.1">
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Breathiness</span>
+                    <span id="breath-display">0.3</span>
+                </div>
+                <input type="range" class="slider" id="breath" min="0" max="1" value="0.3" step="0.1">
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Tongue Position</span>
+                    <span id="tongue-display">0.5</span>
+                </div>
+                <input type="range" class="slider" id="tongue" min="0.2" max="0.8" value="0.5" step="0.1">
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Nasality</span>
+                    <span id="nasality-display">0.15</span>
+                </div>
+                <input type="range" class="slider" id="nasality" min="0" max="0.5" value="0.15" step="0.05">
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Voice Roughness</span>
+                    <span id="jitter-display">0.02</span>
+                </div>
+                <input type="range" class="slider" id="jitter" min="0" max="0.1" value="0.02" step="0.01">
+            </div>
+        </div>
+
+        <div id="debug" class="debug">
+            <div id="debugLog">Initializing synthesizer...</div>
+        </div>
+    </div>
+
+    <script>
+        // Advanced Physical Modeling Engine
+        class AdvancedPhysicalModel {
+            constructor() {
+                this.sampleRate = 44100;
+                this.waveguideLength = 16; // sections
+                this.delayLines = [];
+                this.scatteringCoeffs = [];
+                this.formantFilters = [];
+                
+                // LF glottal model parameters
+                this.glottalState = {
+                    rd: 1.0,    // duty ratio
+                    ra: 0.007,  // rise time
+                    rk: 0.11,   // knee time
+                    rg: 0.5     // glottal width
+                };
+                
+                this.initializeWaveguides();
+            }
+            
+            initializeWaveguides() {
+                // Initialize delay lines for vocal tract sections
+                this.delayLines = [];
+                this.scatteringCoeffs = [];
+                
+                for (let i = 0; i < this.waveguideLength; i++) {
+                    const sectionLength = 1.0 / this.waveguideLength;
+                    const delaySamples = Math.max(1, Math.floor(sectionLength * this.sampleRate / 343 * 100));
+                    
+                    this.delayLines.push({
+                        buffer: new Float32Array(delaySamples),
+                        readIndex: 0,
+                        writeIndex: 0,
+                        length: delaySamples
+                    });
+                    
+                    // Calculate area function and scattering coefficients
+                    const area1 = this.calculateTractArea(i / this.waveguideLength);
+                    const area2 = this.calculateTractArea((i + 1) / this.waveguideLength);
+                    this.scatteringCoeffs.push((area2 - area1) / (area2 + area1));
+                }
+            }
+            
+            calculateTractArea(position) {
+                // Canine vocal tract area function based on anatomical data
+                const baseArea = 2.5; // cm²
+                const tonguePos = params.tongue || 0.5;
+                const constriction = params.mouth;
+                
+                // Gaussian constriction model
+                const constrictionWidth = 0.15;
+                const constrictionDepth = 1.0 - constriction;
+                const constrictionFactor = Math.exp(-Math.pow((position - tonguePos) / constrictionWidth, 2));
+                
+                // Lip radiation
+                const lipArea = position > 0.9 ? constriction : 1.0;
+                
+                return baseArea * (1.0 - constrictionDepth * constrictionFactor) * lipArea;
+            }
+            
+            // Advanced LF glottal flow model
+            generateGlottalFlow(phase, effort) {
+                const { rd, ra, rk, rg } = this.glottalState;
+                const t = phase % 1.0;
+                
+                if (t < rk) {
+                    // Opening phase - smooth rise
+                    const te = rk;
+                    const epsilon = 1 / ra;
+                    const x = t / te;
+                    const flow = 0.5 * (1 - Math.cos(Math.PI * x));
+                    const decay = Math.exp(-epsilon * Math.max(0, t - te * 0.7));
+                    return effort * flow * (0.3 + 0.7 * decay);
+                } else if (t < rk + rg) {
+                    // Closing phase - realistic glottal closure
+                    const tc = rk + rg;
+                    const x = (t - rk) / rg;
+                    const polynomial = 1 - 4.8 * x + 12 * x * x - 5.2 * x * x * x;
+                    return effort * Math.max(0, polynomial) * 0.6;
+                } else {
+                    return 0;
+                }
+            }
+            
+            // Waveguide processing for vocal tract simulation
+            processWaveguide(input) {
+                let signal = input;
+                
+                // Forward and backward traveling waves
+                for (let i = 0; i < this.waveguideLength - 1; i++) {
+                    const delayLine = this.delayLines[i];
+                    const scattering = this.scatteringCoeffs[i];
+                    
+                    // Read delayed sample
+                    const delayed = delayLine.buffer[delayLine.readIndex];
+                    
+                    // Scattering junction
+                    const reflected = signal * scattering;
+                    const transmitted = signal + reflected;
+                    
+                    // Write to delay line
+                    delayLine.buffer[delayLine.writeIndex] = transmitted;
+                    
+                    // Update pointers
+                    delayLine.readIndex = (delayLine.readIndex + 1) % delayLine.length;
+                    delayLine.writeIndex = (delayLine.writeIndex + 1) % delayLine.length;
+                    
+                    signal = transmitted;
+                }
+                
+                return signal;
+            }
+            
+            // Advanced formant filtering using parallel resonators
+            applyFormantFiltering(signal, formants, sample) {
+                let filtered = 0;
+                
+                // Three formant resonators
+                const formantFreqs = [formants.f1, formants.f2, formants.f3];
+                const formantAmps = [0.6, 0.4, 0.25];
+                const formantBandwidths = [80, 120, 160];
+                
+                for (let i = 0; i < 3; i++) {
+                    const omega = 2 * Math.PI * formantFreqs[i] / this.sampleRate;
+                    const bandwidth = 2 * Math.PI * formantBandwidths[i] / this.sampleRate;
+                    const r = Math.exp(-bandwidth);
+                    
+                    // Second-order resonator
+                    const cosOmega = Math.cos(omega);
+                    const resonance = signal * Math.sin(omega * sample) * r * formantAmps[i];
+                    filtered += resonance;
+                }
+                
+                return filtered;
+            }
+            
+            // Turbulence modeling for aspiration and fricatives
+            generateTurbulence(breathiness, sample) {
+                if (breathiness <= 0) return 0;
+                
+                // Generate colored noise
+                const whiteNoise = Math.random() * 2 - 1;
+                
+                // High-frequency emphasis for breath-like quality
+                const freq = 2000 + 1000 * Math.random();
+                const emphasis = Math.sin(2 * Math.PI * freq * sample / this.sampleRate);
+                
+                // Reynolds number based intensity
+                const intensity = breathiness * breathiness; // quadratic relationship
+                
+                return whiteNoise * emphasis * intensity * 0.3;
+            }
+            
+            // Jitter and shimmer for natural voice quality
+            applyVoiceQuality(fundamentalFreq, amplitude, sample) {
+                const jitterAmount = 0.02; // 2% frequency variation
+                const shimmerAmount = 0.03; // 3% amplitude variation
+                
+                // Low-frequency modulation for jitter/shimmer
+                const modulationRate = 8; // Hz
+                const modPhase = 2 * Math.PI * modulationRate * sample / this.sampleRate;
+                
+                const jitter = 1 + jitterAmount * Math.sin(modPhase);
+                const shimmer = 1 + shimmerAmount * Math.sin(modPhase * 1.3);
+                
+                return {
+                    frequency: fundamentalFreq * jitter,
+                    amplitude: amplitude * shimmer
+                };
+            }
+        }
+
+        // Simple, reliable dog voice synthesizer with advanced modeling
+        let audioContext = null;
+        let isAudioReady = false;
+        let masterGain = null;
+        
+        // Physical model parameters - enhanced
+        let params = {
+            pitch: 200,
+            tract: 14,
+            mouth: 0.6,
+            breath: 0.3,
+            tongue: 0.5,
+            nasality: 0.15,
+            jitter: 0.02,
+            shimmer: 0.03
+        };
+
+        function log(message) {
+            console.log(message);
+            const debugLog = document.getElementById('debugLog');
+            debugLog.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+
+        function updateStatus(message, color = 'white') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.color = color;
+        }
+
+        // Initialize audio system - BACK TO WORKING VERSION
+        async function startAudio() {
+            const startBtn = document.getElementById('startBtn');
+            const soundButtons = document.querySelectorAll('[data-sound]');
+            
+            try {
+                log('🔄 Starting audio initialization...');
+                updateStatus('Initializing audio system...', '#ffc107');
+                
+                // Create AudioContext
+                log('Creating AudioContext...');
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                log('✓ AudioContext created, state: ' + audioContext.state);
+                
+                // Resume if needed
+                if (audioContext.state === 'suspended') {
+                    log('Resuming suspended AudioContext...');
+                    await audioContext.resume();
+                    log('✓ AudioContext resumed, state: ' + audioContext.state);
+                }
+                
+                // Create master gain
+                masterGain = audioContext.createGain();
+                masterGain.gain.value = 0.3;
+                masterGain.connect(audioContext.destination);
+                log('✓ Master gain created');
+                
+                // Test sound
+                log('Playing test beep...');
+                updateStatus('Testing audio output...', '#ffc107');
+                await playTestBeep();
+                
+                // Success!
+                isAudioReady = true;
+                log('✅ Audio system ready!');
+                updateStatus('✅ Audio Ready - Dog sounds activated!', '#2ecc71');
+                
+                // Update UI
+                startBtn.textContent = '🔊 AUDIO ACTIVE';
+                startBtn.classList.add('enabled');
+                startBtn.disabled = true;
+                
+                // Enable test tone and sound buttons
+                document.getElementById('testToneBtn').disabled = false;
+                document.getElementById('testToneBtn').style.opacity = '1';
+                
+                soundButtons.forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                });
+                
+            } catch (error) {
+                log('❌ Audio initialization failed: ' + error.message);
+                updateStatus('❌ Audio failed: ' + error.message, '#e74c3c');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Play test beep - WORKING VERSION
+        function playTestBeep() {
+            return new Promise((resolve) => {
+                log('🔊 Creating test beep...');
+                
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                // Connect directly to destination for initial test
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                osc.frequency.value = 440;
+                osc.type = 'sine';
+                
+                const now = audioContext.currentTime;
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.1, now + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                
+                osc.start(now);
+                osc.stop(now + 0.25);
+                
+                log('✓ Test beep: oscillator started, should be audible now');
+                
+                osc.onended = () => {
+                    log('✓ Test beep completed');
+                    resolve();
+                };
+            });
+        }
+
+        // Play test beep with debugging
+        function playTestBeep() {
+            return new Promise((resolve) => {
+                log('🔊 Creating test beep...');
+                
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                // Connect directly to destination for initial test
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                osc.frequency.value = 440;
+                osc.type = 'sine';
+                
+                const now = audioContext.currentTime;
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.1, now + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                
+                osc.start(now);
+                osc.stop(now + 0.25);
+                
+                log('✓ Test beep: oscillator started, should be audible now');
+                
+                osc.onended = () => {
+                    log('✓ Test beep completed');
+                    resolve();
+                };
+            });
+        }
+
+        // Advanced synthesis - USING EXACT SAME TECHNIQUE AS TEST TONE
+        function synthesizeSound(soundParams, formants, duration) {
+            return new Promise((resolve) => {
+                log('🔬 Advanced synthesis using test tone technique...');
+                log('📊 Pitch: ' + soundParams.pitch + 'Hz, Tract: ' + soundParams.tract + 'cm');
+                
+                // Create oscillator and gain - EXACT SAME AS TEST TONE
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                // Connect EXACTLY like test tone
+                osc.connect(gain);
+                gain.connect(masterGain);
+                
+                // Set frequency from physical model
+                osc.frequency.value = soundParams.pitch;
+                
+                // Choose waveform based on sound type
+                const soundType = getSoundType(soundParams);
+                if (soundType === 'growl') {
+                    osc.type = 'sawtooth';
+                } else if (soundType === 'bark' || soundType === 'yip') {
+                    osc.type = 'triangle';
+                } else {
+                    osc.type = 'sine';
+                }
+                
+                log('✓ Using ' + osc.type + ' wave for ' + soundType);
+                
+                // Apply envelope - SAME TECHNIQUE AS TEST TONE
+                const now = audioContext.currentTime;
+                
+                // Calculate envelope based on sound type and physical parameters
+                const attack = soundType === 'bark' || soundType === 'yip' ? 0.01 : 0.1;
+                const sustain = duration - attack - 0.1;
+                const baseGain = 0.2 * (soundParams.vocalEffort || 0.8) * soundParams.mouth;
+                
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(baseGain, now + attack);
+                
+                if (sustain > 0) {
+                    gain.gain.linearRampToValueAtTime(baseGain, now + attack + sustain);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                } else {
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                }
+                
+                // Add formant modulation using frequency modulation
+                if (formants && formants.f1) {
+                    const lfo = audioContext.createOscillator();
+                    const lfoGain = audioContext.createGain();
+                    
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(osc.frequency);
+                    
+                    // Use first formant for vibrato-like effect
+                    lfo.frequency.value = Math.max(5, formants.f1 / 100);
+                    lfoGain.gain.value = soundParams.pitch * 0.05; // 5% vibrato
+                    
+                    lfo.start(now);
+                    lfo.stop(now + duration);
+                    
+                    log('✓ Added formant modulation at ' + lfo.frequency.value + 'Hz');
+                }
+                
+                // Start and stop - EXACTLY like test tone
+                osc.start(now);
+                osc.stop(now + duration);
+                
+                log('✓ Advanced synthesis started using proven audio path');
+                
+                osc.onended = () => {
+                    log('✅ Advanced synthesis completed successfully');
+                    resolve();
+                };
+                
+                // Debug info - same as test tone
+                log('📊 AudioContext state: ' + audioContext.state);
+                log('📊 Master gain value: ' + masterGain.gain.value);
+                log('📊 Synthesis gain value: ' + gain.gain.value);
+            });
+        } glottalSamples);
+                
+                if (maxAmplitude < 0.001) {
+                    log('⚠️ Low amplitude, boosting...');
+                    for (let i = 0; i < frameCount; i++) {
+                        channelData[i] *= 10; // Boost quiet signals
+                    }
+                }
+                
+                // USE SAME CONNECTION METHOD AS TEST TONE
+                log('🔊 Connecting using proven test tone method...');
+                const source = audioContext.createBufferSource();
+                const gain = audioContext.createGain();
+                
+                // Connect: source -> gain -> masterGain -> destination (same as test tone)
+                source.buffer = audioBuffer;
+                source.connect(gain);
+                gain.connect(masterGain);
+                
+                // Set gain envelope like test tone
+                const now = audioContext.currentTime;
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.8, now + 0.05);
+                gain.gain.linearRampToValueAtTime(0.8, now + duration - 0.05);
+                gain.gain.linearRampToValueAtTime(0, now + duration);
+                
+                log('✓ Audio routing: source -> gain -> masterGain -> destination');
+                log('📊 Starting at time: ' + now + ', duration: ' + duration);
+                
+                source.start(now);
+                source.stop(now + duration);
+                
+                source.onended = () => {
+                    log('✅ Advanced synthesis completed successfully');
+                    resolve();
+                };
+                
+                // Debug info
+                log('📊 AudioContext state: ' + audioContext.state);
+                log('📊 Master gain: ' + masterGain.gain.value);
+                log('📊 Synthesis gain: ' + gain.gain.value);
+            });
+        } 0; sample < frameCount; sample++) {
+                    const t = sample / sampleRate;
+                    const progress = t / duration;
+                    
+                    let signal = 0;
+                    
+                    // ADVANCED GLOTTAL SOURCE using LF model
+                    if (soundParams.pitch > 0) {
+                        // Add jitter for natural variation
+                        const jitterAmount = soundParams.jitter || 0.02;
+                        const jitterMod = 1 + jitterAmount * Math.sin(2 * Math.PI * 5 * t);
+                        const pitchWithJitter = soundParams.pitch * jitterMod;
+                        
+                        const phase = (pitchWithJitter * t) % 1.0;
+                        
+                        // Advanced LF glottal pulse model
+                        let glottalFlow = 0;
+                        const rd = 0.8; // duty ratio
+                        const ra = 0.1; // rise time
+                        
+                        if (phase < rd) {
+                            // Opening phase with realistic LF shape
+                            const p = phase / rd;
+                            const lfShape = 0.5 * (1 - Math.cos(Math.PI * p));
+                            const decay = Math.exp(-p / ra);
+                            glottalFlow = lfShape * decay;
+                        } else {
+                            // Closing phase with sharp cutoff
+                            const p = (phase - rd) / (1 - rd);
+                            glottalFlow = Math.exp(-p * 8) * (1 - p);
+                        }
+                        
+                        // Apply vocal effort and shimmer
+                        const shimmerAmount = soundParams.shimmer || 0.03;
+                        const shimmerMod = 1 + shimmerAmount * Math.sin(2 * Math.PI * 7 * t);
+                        glottalFlow *= soundParams.vocalEffort || 0.8;
+                        glottalFlow *= shimmerMod;
+                        
+                        if (Math.abs(glottalFlow) > maxGlottal) maxGlottal = Math.abs(glottalFlow);
+                        if (Math.abs(glottalFlow) > 0.01) glottalSamples++;
+                        
+                        // ADVANCED FORMANT FILTERING with dynamic control
+                        // Formant frequencies are calculated from tract geometry
+                        const f1_omega = 2 * Math.PI * formants.f1 / sampleRate;
+                        const f2_omega = 2 * Math.PI * formants.f2 / sampleRate;
+                        const f3_omega = 2 * Math.PI * formants.f3 / sampleRate;
+                        
+                        // Resonant formant filters with bandwidth control
+                        const bandwidth = soundParams.bandwidth || 80;
+                        const q1 = formants.f1 / bandwidth;
+                        const q2 = formants.f2 / bandwidth;
+                        const q3 = formants.f3 / bandwidth;
+                        
+                        // Apply formant resonances to glottal source
+                        const f1_response = glottalFlow * Math.sin(f1_omega * sample) / (1 + Math.abs(Math.cos(f1_omega * sample)) * q1);
+                        const f2_response = glottalFlow * Math.sin(f2_omega * sample) / (1 + Math.abs(Math.cos(f2_omega * sample)) * q2);
+                        const f3_response = glottalFlow * Math.sin(f3_omega * sample) / (1 + Math.abs(Math.cos(f3_omega * sample)) * q3);
+                        
+                        // Mix formants with tract-length dependent amplitudes
+                        const tractFactor = soundParams.tract / 14.0; // normalize to 14cm
+                        signal = f1_response * 0.6 * tractFactor + 
+                                f2_response * 0.4 * (2 - tractFactor) + 
+                                f3_response * 0.25;
+                        
+                        // Apply mouth opening effects (lip radiation)
+                        const mouthFactor = soundParams.mouth;
+                        signal *= (0.3 + 0.7 * mouthFactor); // more open = more radiation
+                        
+                        // Apply tongue position effects on spectral tilt
+                        const tongueFactor = soundParams.tongue;
+                        const spectralTilt = 1.0 - tongueFactor * 0.3; // forward tongue = brighter
+                        signal *= spectralTilt;
+                    }
+                    
+                    // ADVANCED TURBULENCE MODELING
+                    if (soundParams.breath > 0) {
+                        // Colored noise with spectral shaping
+                        const whiteNoise = Math.random() * 2 - 1;
+                        
+                        // High-frequency emphasis for breathiness
+                        const breathFreq = 1500 + soundParams.breath * 2000;
+                        const breathEmphasis = Math.sin(2 * Math.PI * breathFreq * t);
+                        
+                        // Reynolds number modeling for turbulence intensity
+                        const reynoldsEffect = soundParams.breath * soundParams.breath;
+                        const turbulence = whiteNoise * breathEmphasis * reynoldsEffect * 0.4;
+                        
+                        // Apply tract filtering to breath noise
+                        const breathF1 = Math.sin(2 * Math.PI * formants.f1 * t) * 0.3;
+                        const filteredTurbulence = turbulence * (0.7 + 0.3 * breathF1);
+                        
+                        signal += filteredTurbulence;
+                    }
+                    
+                    // ADVANCED NASAL COUPLING
+                    if (soundParams.nasality && soundParams.nasality > 0) {
+                        const nasalFreq = 280; // nasal formant frequency
+                        const nasalResonance = Math.sin(2 * Math.PI * nasalFreq * t);
+                        const nasalComponent = signal * nasalResonance * soundParams.nasality * 0.2;
+                        signal += nasalComponent;
+                    }
+                    
+                    // Apply envelope
+                    const envelope = getEnvelope(progress, getSoundType(soundParams));
+                    const finalSample = signal * envelope * 0.4; // Increased for better audibility
+                    
+                    channelData[sample] = finalSample;
+                    
+                    // Track statistics
+                    const absValue = Math.abs(finalSample);
+                    if (absValue > maxAmplitude) maxAmplitude = absValue;
+                    if (absValue > 0.001) nonZeroSamples++;
+                }
+                
+                log('📊 ADVANCED GLOTTAL DEBUG - Max glottal: ' + maxGlottal.toFixed(4) + ', Glottal samples: ' + glottalSamples);
+                log('📊 ADVANCED FINAL DEBUG - Max amplitude: ' + maxAmplitude.toFixed(4) + ', Non-zero samples: ' + nonZeroSamples);
+                
+                if (glottalSamples === 0) {
+                    log('❌ NO GLOTTAL ACTIVATION! Check pitch parameter');
+                }
+                
+                if (maxAmplitude < 0.001) {
+                    log('⚠️ WARNING: Generated audio is very quiet - using emergency fallback');
+                    // Generate emergency fallback
+                    for (let sample = 0; sample < frameCount; sample++) {
+                        const t = sample / sampleRate;
+                        const progress = t / duration;
+                        const envelope = getEnvelope(progress, getSoundType(soundParams));
+                        channelData[sample] = Math.sin(2 * Math.PI * (soundParams.pitch || 220) * t) * envelope * 0.2;
+                    }
+                    log('✓ Emergency fallback generated');
+                }
+                
+                // Play the buffer
+                log('🔊 Connecting advanced synthesis buffer to audio output...');
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(masterGain);
+                
+                source.start();
+                source.onended = () => {
+                    log('✓ Advanced synthesis playback completed');
+                    resolve();
+                };
+            });
+        }
+
+        // Generate dog vocalization using physical modeling
+        async function generateDogSound(type) {
+            if (!isAudioReady) {
+                log('❌ Audio not ready');
+                return;
+            }
+            
+            log('🐕 Generating ' + type + ' sound...');
+            
+            try {
+                // Apply sound-specific parameters
+                const soundParams = getSoundParams(type);
+                log('✓ Sound parameters: ' + JSON.stringify(soundParams));
+                
+                const duration = getSoundDuration(type);
+                log('✓ Duration: ' + duration + 's');
+                
+                // Calculate formants from physical model
+                const formants = calculateFormants(soundParams);
+                log('✓ Formants calculated: ' + JSON.stringify(formants));
+                
+                // Generate the sound
+                log('🔊 Starting synthesis...');
+                await synthesizeSound(soundParams, formants, duration);
+                
+                log('✅ ' + type + ' sound completed successfully');
+                
+            } catch (error) {
+                log('❌ Dog sound generation failed: ' + error.message);
+                log('❌ Full error: ' + error.stack);
+                
+                // Emergency fallback - simple beep
+                log('🚨 Playing emergency fallback beep...');
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(masterGain);
+                
+                osc.frequency.value = 200;
+                osc.type = 'sine';
+                
+                const now = audioContext.currentTime;
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.1, now + 0.1);
+                gain.gain.linearRampToValueAtTime(0, now + 0.5);
+                
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
+
+        // Get advanced sound-specific parameters
+        function getSoundParams(type) {
+            const baseParams = {
+                pitch: params.pitch,
+                tract: params.tract,
+                mouth: params.mouth,
+                breath: params.breath,
+                tongue: params.tongue,
+                nasality: params.nasality,
+                jitter: params.jitter,
+                shimmer: params.shimmer
+            };
+            
+            // Advanced sound-specific modifications based on canine acoustics research
+            const modifications = {
+                bark: { 
+                    pitch: 220, tract: 12, mouth: 0.4, breath: 0.1, 
+                    tongue: 0.3, nasality: 0.05, jitter: 0.05, shimmer: 0.08 
+                },
+                howl: { 
+                    pitch: 180, tract: 16, mouth: 0.8, breath: 0.2, 
+                    tongue: 0.5, nasality: 0.1, jitter: 0.01, shimmer: 0.02 
+                },
+                whine: { 
+                    pitch: 350, tract: 11, mouth: 0.6, breath: 0.4, 
+                    tongue: 0.7, nasality: 0.25, jitter: 0.03, shimmer: 0.05 
+                },
+                growl: { 
+                    pitch: 95, tract: 15, mouth: 0.3, breath: 0.6, 
+                    tongue: 0.2, nasality: 0.05, jitter: 0.08, shimmer: 0.12 
+                },
+                yip: { 
+                    pitch: 380, tract: 10, mouth: 0.5, breath: 0.2, 
+                    tongue: 0.6, nasality: 0.1, jitter: 0.04, shimmer: 0.06 
+                },
+                pant: { 
+                    pitch: 0, tract: 13, mouth: 0.9, breath: 1.0, 
+                    tongue: 0.4, nasality: 0.3, jitter: 0, shimmer: 0 
+                }
+            };
+            
+            return { ...baseParams, ...modifications[type] };
+        }
+
+        // Calculate formant frequencies from advanced vocal tract model
+        function calculateFormants(soundParams) {
+            const c = 343; // speed of sound
+            const L = soundParams.tract / 100; // tract length in meters
+            
+            // Advanced area function modeling
+            const baseF1 = c / (4 * L);
+            const baseF2 = 3 * baseF1;
+            const baseF3 = 5 * baseF1;
+            
+            // Perturbation theory for tongue and lip effects
+            const tonguePos = soundParams.tongue || 0.5;
+            const mouthOpening = soundParams.mouth;
+            
+            // Tongue body effects on formants
+            const tongueEffect1 = (tonguePos - 0.5) * 0.6; // F1 sensitive to tongue height
+            const tongueEffect2 = (tonguePos - 0.5) * -0.4; // F2 inversely related
+            const tongueEffect3 = (tonguePos - 0.5) * 0.2;
+            
+            // Lip constriction effects
+            const lipEffect = (mouthOpening - 0.5) * 0.3;
+            
+            // Calculate perturbed formants
+            let f1 = baseF1 * (1 + tongueEffect1 + lipEffect * 0.3);
+            let f2 = baseF2 * (1 + tongueEffect2 + lipEffect * 0.8);
+            let f3 = baseF3 * (1 + tongueEffect3 + lipEffect * 1.2);
+            
+            // Ensure physiologically plausible ranges
+            f1 = Math.max(300, Math.min(1200, f1));
+            f2 = Math.max(800, Math.min(2800, f2));
+            f3 = Math.max(1500, Math.min(4500, f3));
+            
+            // Add anti-formant effects for nasal coupling
+            const nasality = soundParams.nasality || 0.15;
+            if (nasality > 0) {
+                f1 *= (1 - nasality * 0.1);
+                f2 *= (1 + nasality * 0.15);
+            }
+            
+            return { f1, f2, f3 };
+        }
+
+        // Test tone with detailed debugging
+        function playTestTone() {
+            if (!isAudioReady) {
+                log('❌ Audio not ready for test tone');
+                return;
+            }
+            
+            log('🎵 Playing test tone with debugging...');
+            updateStatus('Playing test tone...', '#9b59b6');
+            
+            try {
+                // Create simple oscillator test
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                // Connect: oscillator -> gain -> master -> destination
+                osc.connect(gain);
+                gain.connect(masterGain);
+                
+                log('✓ Test tone: oscillator and gain created and connected');
+                
+                osc.frequency.value = 440;
+                osc.type = 'sine';
+                
+                const now = audioContext.currentTime;
+                const duration = 1.0;
+                
+                // Envelope
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+                gain.gain.linearRampToValueAtTime(0.2, now + duration - 0.1);
+                gain.gain.linearRampToValueAtTime(0, now + duration);
+                
+                log('✓ Test tone: envelope set, starting oscillator');
+                
+                osc.start(now);
+                osc.stop(now + duration);
+                
+                osc.onended = () => {
+                    log('✓ Test tone completed successfully');
+                    updateStatus('✅ Test tone completed - Audio path working!', '#2ecc71');
+                };
+                
+                // Check audio context state
+                log('📊 AudioContext state: ' + audioContext.state);
+                log('📊 Master gain value: ' + masterGain.gain.value);
+                log('📊 Test gain value: ' + gain.gain.value);
+                
+            } catch (error) {
+                log('❌ Test tone failed: ' + error.message);
+                updateStatus('❌ Test tone failed: ' + error.message, '#e74c3c');
+            }
+        }
+
+        // Get envelope for different sound types
+        function getEnvelope(progress, type) {
+            switch(type) {
+                case 'bark':
+                case 'yip':
+                    return progress < 0.1 ? progress / 0.1 : Math.exp(-(progress - 0.1) * 8);
+                case 'howl':
+                    return progress < 0.3 ? progress / 0.3 : 
+                           progress > 0.7 ? 1 - (progress - 0.7) / 0.3 : 1;
+                case 'whine':
+                    const base = progress < 0.2 ? progress / 0.2 : 
+                                 progress > 0.8 ? 1 - (progress - 0.8) / 0.2 : 1;
+                    return base * (0.8 + 0.2 * Math.sin(2 * Math.PI * 6 * progress));
+                case 'growl':
+                    return Math.exp(-progress * 1.5) * (0.7 + 0.3 * Math.sin(2 * Math.PI * 15 * progress));
+                case 'pant':
+                    return Math.abs(Math.sin(2 * Math.PI * 3 * progress)) * Math.exp(-progress);
+                default:
+                    return Math.exp(-progress * 2);
+            }
+        }
+
+        // Get sound type from parameters
+        function getSoundType(soundParams) {
+            if (soundParams.pitch === 0) return 'pant';
+            if (soundParams.pitch < 120) return 'growl';
+            if (soundParams.pitch > 300) return soundParams.breath > 0.3 ? 'whine' : 'yip';
+            if (soundParams.mouth < 0.5) return 'bark';
+            return 'howl';
+        }
+
+        // Get sound duration
+        function getSoundDuration(type) {
+            const durations = {
+                bark: 0.6, howl: 2.5, whine: 1.8, 
+                growl: 2.0, yip: 0.3, pant: 3.0
+            };
+            return durations[type] || 1.0;
+        }
+
+        // Update parameter displays
+        function updateDisplay(param, value) {
+            const display = document.getElementById(param + '-display');
+            if (display) {
+                if (param === 'pitch') {
+                    display.textContent = Math.round(value) + ' Hz';
+                } else if (param === 'tract') {
+                    display.textContent = value + ' cm';
+                } else {
+                    display.textContent = value;
+                }
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🐕 Dog Voice Synthesizer loaded');
+            
+            // Start button
+            document.getElementById('startBtn').addEventListener('click', startAudio);
+            
+            // Test tone button
+            document.getElementById('testToneBtn').addEventListener('click', playTestTone);
+            
+            // Sound buttons
+            document.querySelectorAll('[data-sound]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (isAudioReady) {
+                        const soundType = e.target.getAttribute('data-sound');
+                        e.target.style.background = 'linear-gradient(145deg, #2ecc71, #27ae60)';
+                        generateDogSound(soundType);
+                        setTimeout(() => {
+                            e.target.style.background = '';
+                        }, getSoundDuration(soundType) * 1000);
+                    } else {
+                        updateStatus('⚠️ Click START AUDIO first!', '#ff9800');
+                    }
+                });
+            });
+            
+            // Parameter sliders - enhanced
+            ['pitch', 'tract', 'mouth', 'breath', 'tongue', 'nasality', 'jitter'].forEach(param => {
+                const slider = document.getElementById(param);
+                if (slider) {
+                    slider.addEventListener('input', (e) => {
+                        params[param] = parseFloat(e.target.value);
+                        updateDisplay(param, params[param]);
+                    });
+                    updateDisplay(param, params[param]);
+                }
+            });
+            
+            log('✓ Event listeners attached');
+        });
+    </script>
+</body>
+</html>

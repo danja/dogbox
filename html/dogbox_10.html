@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Dog Voice Synthesizer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-section h3 {
+            margin-bottom: 15px;
+            color: #4facfe;
+            font-size: 1.1em;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .preset-btn {
+            background: linear-gradient(145deg, #2d3561, #1a1a2e);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1em;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preset-btn:hover {
+            border-color: #4facfe;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .preset-btn.active {
+            background: linear-gradient(145deg, #4facfe, #00f2fe);
+            border-color: #00f2fe;
+        }
+
+        .slider-group {
+            margin-bottom: 12px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .slider {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4facfe;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            background: #00f2fe;
+            transform: scale(1.2);
+        }
+
+        .envelope-section {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .envelope-control {
+            text-align: center;
+        }
+
+        .envelope-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.8em;
+            color: #8a8a8a;
+        }
+
+        .envelope-slider {
+            width: 100%;
+            height: 80px;
+            -webkit-appearance: slider-vertical;
+            writing-mode: bt-lr;
+        }
+
+        .start-button {
+            background: linear-gradient(145deg, #4facfe, #00f2fe);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.3em;
+            font-weight: bold;
+            padding: 15px 40px;
+            cursor: pointer;
+            margin: 0 auto;
+            display: block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.5);
+        }
+
+        .start-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .test-button {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .test-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.5;
+        }
+        
+        .play-button {
+            background: linear-gradient(145deg, #9b59b6, #8e44ad);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.3em;
+            font-weight: bold;
+            padding: 15px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+        }
+
+        .play-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.5);
+        }
+
+        .play-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 1.1em;
+        }
+
+        .oscilloscope {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid rgba(79, 172, 254, 0.3);
+        }
+
+        .debug-log {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐕 Advanced Dog Voice Synthesizer</h1>
+        
+        <div class="button-group">
+            <button id="startBtn" class="start-button">Initialize Audio System</button>
+            <button id="playBtn" class="play-button" disabled>Play Current Settings</button>
+            <button id="testBtn" class="test-button" disabled>Test Audio</button>
+        </div>
+        
+        <!-- Master Volume -->
+        <div class="slider-group" style="margin-top: 15px;">
+            <div class="slider-label">
+                <span>Master Volume</span>
+                <span id="masterVolume-display">0.5</span>
+            </div>
+            <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.5" class="slider">
+        </div>
+        <div id="status" class="status">Click Initialize to begin</div>
+        
+        <div class="preset-buttons">
+            <button class="preset-btn" data-preset="bark">🐕 Bark</button>
+            <button class="preset-btn" data-preset="howl">🐺 Howl</button>
+            <button class="preset-btn" data-preset="whine">😢 Whine</button>
+            <button class="preset-btn" data-preset="growl">😠 Growl</button>
+            <button class="preset-btn" data-preset="yip">🐶 Yip</button>
+            <button class="preset-btn" data-preset="pant">💨 Pant</button>
+        </div>
+        
+        <div class="control-panel">
+            <!-- Glottal Source Controls -->
+            <div class="control-section">
+                <h3>Glottal Source</h3>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Pitch</span>
+                        <span id="pitch-display">200 Hz</span>
+                    </div>
+                    <input type="range" class="slider" id="pitch" min="50" max="500" value="200">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Rd (Shape)</span>
+                        <span id="rd-display">0.8</span>
+                    </div>
+                    <input type="range" class="slider" id="rd" min="0.3" max="2.5" value="0.8" step="0.1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Jitter</span>
+                        <span id="jitter-display">0.02</span>
+                    </div>
+                    <input type="range" class="slider" id="jitter" min="0" max="0.1" value="0.02" step="0.01">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Shimmer</span>
+                        <span id="shimmer-display">0.03</span>
+                    </div>
+                    <input type="range" class="slider" id="shimmer" min="0" max="0.1" value="0.03" step="0.01">
+                </div>
+            </div>
+            
+            <!-- Vocal Tract Controls -->
+            <div class="control-section">
+                <h3>Vocal Tract</h3>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Tract Length</span>
+                        <span id="tract-display">14 cm</span>
+                    </div>
+                    <input type="range" class="slider" id="tract" min="8" max="20" value="14" step="0.5">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Constriction Pos</span>
+                        <span id="constriction-display">0.5</span>
+                    </div>
+                    <input type="range" class="slider" id="constriction" min="0.1" max="0.9" value="0.5" step="0.1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Mouth Opening</span>
+                        <span id="mouth-display">0.6</span>
+                    </div>
+                    <input type="range" class="slider" id="mouth" min="0.1" max="1" value="0.6" step="0.1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Nasality</span>
+                        <span id="nasality-display">0.1</span>
+                    </div>
+                    <input type="range" class="slider" id="nasality" min="0" max="0.5" value="0.1" step="0.05">
+                </div>
+            </div>
+            
+            <!-- Noise Controls -->
+            <div class="control-section">
+                <h3>Noise & Turbulence</h3>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Breathiness</span>
+                        <span id="breathiness-display">0.2</span>
+                    </div>
+                    <input type="range" class="slider" id="breathiness" min="0" max="1" value="0.2" step="0.05">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Turbulence</span>
+                        <span id="turbulence-display">0.3</span>
+                    </div>
+                    <input type="range" class="slider" id="turbulence" min="0" max="1" value="0.3" step="0.05">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Noise Color</span>
+                        <span id="noiseColor-display">0.5</span>
+                    </div>
+                    <input type="range" class="slider" id="noiseColor" min="0" max="1" value="0.5" step="0.1">
+                </div>
+            </div>
+            
+            <!-- Formant Controls -->
+            <div class="control-section">
+                <h3>Formants</h3>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>F1 Freq</span>
+                        <span id="f1-display">700 Hz</span>
+                    </div>
+                    <input type="range" class="slider" id="f1" min="200" max="1200" value="700">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>F2 Freq</span>
+                        <span id="f2-display">1200 Hz</span>
+                    </div>
+                    <input type="range" class="slider" id="f2" min="600" max="2500" value="1200">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>F3 Freq</span>
+                        <span id="f3-display">2500 Hz</span>
+                    </div>
+                    <input type="range" class="slider" id="f3" min="1500" max="3500" value="2500">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>F1 Q</span>
+                        <span id="formantQ1-display">5.0</span>
+                    </div>
+                    <input type="range" id="formantQ1" min="1" max="20" step="0.1" value="5" class="slider">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>F2 Q</span>
+                        <span id="formantQ2-display">5.0</span>
+                    </div>
+                    <input type="range" id="formantQ2" min="1" max="20" step="0.1" value="5" class="slider">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>F3 Q</span>
+                        <span id="formantQ3-display">5.0</span>
+                    </div>
+                    <input type="range" id="formantQ3" min="1" max="20" step="0.1" value="5" class="slider">
+                </div>
+            </div>
+        </div>
+        
+        <!-- ADSR Envelopes -->
+        <div class="control-section">
+            <h3>ADSR Envelopes</h3>
+            <div class="control-panel">
+                <!-- Amplitude Envelope -->
+                <div class="control-section">
+                    <h3>Amplitude</h3>
+                    <div class="envelope-section">
+                        <div class="envelope-control">
+                            <label>Attack</label>
+                            <input type="range" class="envelope-slider" id="amp-attack" min="0.001" max="2" value="0.01" step="0.001">
+                            <span id="amp-attack-display">0.01s</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Decay</label>
+                            <input type="range" class="envelope-slider" id="amp-decay" min="0" max="2" value="0.1" step="0.01">
+                            <span id="amp-decay-display">0.1s</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Sustain</label>
+                            <input type="range" class="envelope-slider" id="amp-sustain" min="0" max="1" value="0.7" step="0.01">
+                            <span id="amp-sustain-display">0.7</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Release</label>
+                            <input type="range" class="envelope-slider" id="amp-release" min="0.01" max="3" value="0.3" step="0.01">
+                            <span id="amp-release-display">0.3s</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pitch Envelope -->
+                <div class="control-section">
+                    <h3>Pitch</h3>
+                    <div class="envelope-section">
+                        <div class="envelope-control">
+                            <label>Attack</label>
+                            <input type="range" class="envelope-slider" id="pitch-attack" min="0" max="1" value="0" step="0.01">
+                            <span id="pitch-attack-display">0s</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Decay</label>
+                            <input type="range" class="envelope-slider" id="pitch-decay" min="0" max="1" value="0.1" step="0.01">
+                            <span id="pitch-decay-display">0.1s</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Sustain</label>
+                            <input type="range" class="envelope-slider" id="pitch-sustain" min="0" max="1" value="1" step="0.01">
+                            <span id="pitch-sustain-display">1</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Release</label>
+                            <input type="range" class="envelope-slider" id="pitch-release" min="0" max="1" value="0.1" step="0.01">
+                            <span id="pitch-release-display">0.1s</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filter Envelope -->
+                <div class="control-section">
+                    <h3>Filter</h3>
+                    <div class="envelope-section">
+                        <div class="envelope-control">
+                            <label>Attack</label>
+                            <input type="range" class="envelope-slider" id="filter-attack" min="0" max="1" value="0.02" step="0.01">
+                            <span id="filter-attack-display">0.02s</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Decay</label>
+                            <input type="range" class="envelope-slider" id="filter-decay" min="0" max="1" value="0.2" step="0.01">
+                            <span id="filter-decay-display">0.2s</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Sustain</label>
+                            <input type="range" class="envelope-slider" id="filter-sustain" min="0" max="1" value="0.5" step="0.01">
+                            <span id="filter-sustain-display">0.5</span>
+                        </div>
+                        <div class="envelope-control">
+                            <label>Release</label>
+                            <input type="range" class="envelope-slider" id="filter-release" min="0" max="1" value="0.3" step="0.01">
+                            <span id="filter-release-display">0.3s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <canvas id="oscilloscope" class="oscilloscope"></canvas>
+        <div id="debug" class="debug-log">System ready...</div>
+    </div>
+
+    <script>
+        // ===========================================
+        // Utility Functions
+        // ===========================================
+        
+        const log = (message) => {
+            console.log(message);
+            const debugEl = document.getElementById('debug');
+            debugEl.innerHTML += `<br>${new Date().toLocaleTimeString()}: ${message}`;
+            debugEl.scrollTop = debugEl.scrollHeight;
+        };
+
+        const updateStatus = (message, color = '#4facfe') => {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.borderColor = color;
+        };
+
+        // ===========================================
+        // Envelope Generator Class
+        // ===========================================
+        
+        class EnvelopeGenerator {
+            constructor(audioContext) {
+                this.audioContext = audioContext;
+                this.attack = 0.01;
+                this.decay = 0.1;
+                this.sustain = 0.7;
+                this.release = 0.3;
+            }
+            
+            setADSR(attack, decay, sustain, release) {
+                this.attack = attack;
+                this.decay = decay;
+                this.sustain = sustain;
+                this.release = release;
+            }
+            
+            applyEnvelope(param, startValue, peakValue, sustainValue, startTime, duration) {
+                const now = startTime || this.audioContext.currentTime;
+                const attackTime = now + this.attack;
+                const decayTime = attackTime + this.decay;
+                const releaseTime = now + duration;
+                const endTime = releaseTime + this.release;
+                
+                param.cancelScheduledValues(now);
+                param.setValueAtTime(startValue, now);
+                param.linearRampToValueAtTime(peakValue, attackTime);
+                param.exponentialRampToValueAtTime(sustainValue * this.sustain + 0.001, decayTime);
+                param.setValueAtTime(sustainValue * this.sustain, releaseTime);
+                param.exponentialRampToValueAtTime(0.001, endTime);
+                
+                return endTime - now;
+            }
+        }
+
+        // ===========================================
+        // LF Glottal Source Model
+        // ===========================================
+        
+        class LFGlottalSource {
+            constructor(audioContext) {
+                this.audioContext = audioContext;
+                this.rd = 0.8;
+                this.jitter = 0.02;
+                this.shimmer = 0.03;
+            }
+            
+            generateGlottalWaveform(duration, sampleRate, f0) {
+                const numSamples = Math.floor(duration * sampleRate);
+                const buffer = this.audioContext.createBuffer(1, numSamples, sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                let phase = 0;
+                const T0 = 1 / f0;
+                
+                for (let i = 0; i < numSamples; i++) {
+                    const t = i / sampleRate;
+                    
+                    // Apply jitter and shimmer
+                    const jitterMod = 1 + this.jitter * (Math.random() - 0.5);
+                    const shimmerMod = 1 + this.shimmer * (Math.random() - 0.5);
+                    const currentF0 = f0 * jitterMod;
+                    
+                    phase += currentF0 / sampleRate;
+                    const localPhase = phase % 1;
+                    
+                    // LF model parameters
+                    const te = this.rd / (2 * Math.PI);
+                    const tp = te / (0.85 + 0.15 * this.rd);
+                    const ta = 0.03 * te;
+                    
+                    let sample = 0;
+                    
+                    if (localPhase < tp) {
+                        // Opening phase
+                        const t1 = localPhase / tp;
+                        sample = Math.sin(Math.PI * t1) * Math.exp(-3 * t1);
+                    } else if (localPhase < te) {
+                        // Closing phase
+                        const t2 = (localPhase - tp) / (te - tp);
+                        sample = Math.cos(Math.PI * t2 / 2) * Math.exp(-3 * (1 + t2));
+                    } else {
+                        // Return phase
+                        const t3 = (localPhase - te) / (1 - te);
+                        sample = -0.3 * Math.exp(-20 * t3);
+                    }
+                    
+                    data[i] = sample * shimmerMod;
+                }
+                
+                return buffer;
+            }
+        }
+
+        // ===========================================
+        // Digital Waveguide Vocal Tract
+        // ===========================================
+        
+        class WaveguideVocalTract {
+            constructor(audioContext) {
+                this.audioContext = audioContext;
+                this.numSections = 16;
+                this.tractLength = 14; // cm
+                this.constrictionPosition = 0.5;
+                this.constrictionAmount = 0.5;
+                this.delays = [];
+                this.filters = [];
+                
+                this.initializeWaveguide();
+            }
+            
+            initializeWaveguide() {
+                // Create delay lines and filters for each section
+                for (let i = 0; i < this.numSections; i++) {
+                    const delay = this.audioContext.createDelay(0.1);
+                    const filter = this.audioContext.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 4000;
+                    filter.Q.value = 1;
+                    
+                    this.delays.push(delay);
+                    this.filters.push(filter);
+                }
+            }
+            
+            updateTractShape() {
+                const sectionLength = this.tractLength / this.numSections / 100; // convert to meters
+                const speedOfSound = 343; // m/s
+                
+                for (let i = 0; i < this.numSections; i++) {
+                    const position = i / this.numSections;
+                    const area = this.calculateArea(position);
+                    
+                    // Update delay time based on section length
+                    const delayTime = sectionLength / speedOfSound;
+                    this.delays[i].delayTime.value = delayTime;
+                    
+                    // Update filter based on area
+                    const cutoff = 1000 + area * 3000;
+                    this.filters[i].frequency.value = cutoff;
+                }
+            }
+            
+            calculateArea(position) {
+                // Model constriction
+                const constrictionWidth = 0.2;
+                const distance = Math.abs(position - this.constrictionPosition);
+                const constriction = Math.exp(-distance * distance / (constrictionWidth * constrictionWidth));
+                
+                return 1 - this.constrictionAmount * constriction;
+            }
+            
+            connect(source, destination) {
+                let currentNode = source;
+                
+                // Connect through delay lines and filters
+                for (let i = 0; i < this.numSections; i++) {
+                    currentNode.connect(this.delays[i]);
+                    this.delays[i].connect(this.filters[i]);
+                    currentNode = this.filters[i];
+                }
+                
+                currentNode.connect(destination);
+            }
+        }
+
+        // ===========================================
+        // Formant Filter Bank
+        // ===========================================
+        
+        class FormantFilterBank {
+            constructor(audioContext) {
+                this.audioContext = audioContext;
+                this.formants = [];
+                
+                // Create 4 formant filters with different gains
+                const gains = [1.0, 0.8, 0.6, 0.4]; // Higher gain for lower formants
+                
+                for (let i = 0; i < 4; i++) {
+                    const filter = this.audioContext.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.gain.value = gains[i];
+                    this.formants.push(filter);
+                }
+                
+                // Initialize with default frequencies
+                this.updateFormants(700, 1200, 2500, 3500, 5);
+            }
+            
+            updateFormants(f1, f2, f3, f4, q1, q2, q3) {
+                const frequencies = [f1, f2, f3, f4];
+                const qValues = [q1, q2, q3, (q1 + q2 + q3) / 3]; // Use average Q for F4
+                
+                // Set each formant's frequency and Q (quality factor)
+                for (let i = 0; i < 4; i++) {
+                    const filter = this.formants[i];
+                    filter.frequency.value = frequencies[i];
+                    
+                    // Use individual Q values for each formant
+                    // Higher Q = narrower bandwidth, more pronounced formant
+                    filter.Q.value = qValues[Math.min(i, 2)] || 5; // Use F3 Q for F4
+                    
+                    // Log the formant settings for debugging
+                    log(`Formant ${i+1}: ${Math.round(frequencies[i])}Hz, Q: ${filter.Q.value.toFixed(1)}`);
+                }
+            }
+            
+            connect(source, destination) {
+                const merger = this.audioContext.createChannelMerger(4);
+                
+                // Parallel formant filters
+                for (let i = 0; i < 4; i++) {
+                    source.connect(this.formants[i]);
+                    this.formants[i].connect(merger, 0, i);
+                }
+                
+                merger.connect(destination);
+            }
+        }
+
+        // ===========================================
+        // Noise Generator
+        // ===========================================
+        
+        class NoiseGenerator {
+            constructor(audioContext) {
+                this.audioContext = audioContext;
+                this.bufferSize = 4096;
+                this.noiseBuffer = this.createNoiseBuffer();
+            }
+            
+            createNoiseBuffer() {
+                const buffer = this.audioContext.createBuffer(1, this.bufferSize, this.audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                // Generate white noise
+                for (let i = 0; i < this.bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                
+                return buffer;
+            }
+            
+            createColoredNoise(color = 0.5) {
+                const source = this.audioContext.createBufferSource();
+                source.buffer = this.noiseBuffer;
+                source.loop = true;
+                
+                // Color the noise with filters
+                const filter = this.audioContext.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 200 + color * 3800;
+                filter.Q.value = 1;
+                
+                source.connect(filter);
+                
+                return { source, output: filter };
+            }
+        }
+
+        // ===========================================
+        // Preset Manager
+        // ===========================================
+        
+        class PresetManager {
+            constructor() {
+                this.presets = {
+                    bark: {
+                        pitch: 120,
+                        rd: 1.5,
+                        jitter: 0.05,
+                        shimmer: 0.1,
+                        tract: 14,
+                        constriction: 0.4,
+                        mouth: 0.7,
+                        nasality: 0.1,
+                        breathiness: 0.3,
+                        turbulence: 0.3,
+                        noiseColor: 0.4,
+                        f1: 500,
+                        f2: 1500,
+                        f3: 2500,
+                        formantQ1: 8,
+                        formantQ2: 10,
+                        formantQ3: 12,
+                        ampEnv: { attack: 0.01, decay: 0.05, sustain: 0.6, release: 0.2 },
+                        pitchEnv: { attack: 0, decay: 0.1, sustain: 0.9, release: 0.1 },
+                        filterEnv: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.2 }
+                    },
+                    howl: {
+                        pitch: 180,
+                        rd: 1.2,
+                        jitter: 0.01,
+                        shimmer: 0.02,
+                        tract: 16,
+                        constriction: 0.5,
+                        mouth: 0.8,
+                        nasality: 0.3,
+                        breathiness: 0.4,
+                        turbulence: 0.2,
+                        noiseColor: 0.5,
+                        f1: 400,
+                        f2: 1200,
+                        f3: 2800,
+                        formantQ1: 12,
+                        formantQ2: 14,
+                        formantQ3: 15,
+                        ampEnv: { attack: 0.3, decay: 0.2, sustain: 0.8, release: 0.5 },
+                        pitchEnv: { attack: 0.2, decay: 0.1, sustain: 1.1, release: 0.3 },
+                        filterEnv: { attack: 0.2, decay: 0.3, sustain: 0.7, release: 0.4 }
+                    },
+                    whine: {
+                        pitch: 420,
+                        rd: 0.5,
+                        jitter: 0.04,
+                        shimmer: 0.06,
+                        tract: 10,
+                        constriction: 0.7,
+                        mouth: 0.5,
+                        nasality: 0.3,
+                        breathiness: 0.5,
+                        turbulence: 0.3,
+                        noiseColor: 0.6,
+                        f1: 1000,
+                        f2: 1800,
+                        f3: 3200,
+                        formantQ1: 10,
+                        formantQ2: 12,
+                        formantQ3: 14,
+                        ampEnv: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.3 },
+                        pitchEnv: { attack: 0.05, decay: 0.1, sustain: 1.05, release: 0.2 },
+                        filterEnv: { attack: 0.05, decay: 0.15, sustain: 0.6, release: 0.25 }
+                    },
+                    growl: {
+                        pitch: 85,
+                        rd: 1.8,
+                        jitter: 0.1,
+                        shimmer: 0.15,
+                        tract: 16,
+                        constriction: 0.2,
+                        mouth: 0.3,
+                        nasality: 0.1,
+                        breathiness: 0.7,
+                        turbulence: 0.9,
+                        noiseColor: 0.8,
+                        f1: 300,
+                        f2: 800,
+                        f3: 2000,
+                        formantQ1: 5,
+                        formantQ2: 6,
+                        formantQ3: 7,
+                        ampEnv: { attack: 0.05, decay: 0.1, sustain: 0.8, release: 0.4 },
+                        pitchEnv: { attack: 0, decay: 0.05, sustain: 0.95, release: 0.1 },
+                        filterEnv: { attack: 0.02, decay: 0.08, sustain: 0.4, release: 0.3 }
+                    },
+                    yip: {
+                        pitch: 450,
+                        rd: 0.4,
+                        jitter: 0.05,
+                        shimmer: 0.08,
+                        tract: 9,
+                        constriction: 0.6,
+                        mouth: 0.4,
+                        nasality: 0.2,
+                        breathiness: 0.3,
+                        turbulence: 0.2,
+                        noiseColor: 0.5,
+                        f1: 1000,
+                        f2: 2000,
+                        f3: 3500,
+                        formantQ1: 10,
+                        formantQ2: 12,
+                        formantQ3: 14,
+                        ampEnv: { attack: 0.005, decay: 0.02, sustain: 0.5, release: 0.1 },
+                        pitchEnv: { attack: 0, decay: 0.05, sustain: 0.95, release: 0.05 },
+                        filterEnv: { attack: 0.005, decay: 0.05, sustain: 0.6, release: 0.1 }
+                    },
+                    pant: {
+                        pitch: 0,
+                        rd: 0,
+                        jitter: 0,
+                        shimmer: 0,
+                        tract: 13,
+                        constriction: 0.4,
+                        mouth: 0.9,
+                        nasality: 0.4,
+                        breathiness: 1,
+                        turbulence: 0.8,
+                        noiseColor: 0.8,
+                        f1: 600,
+                        f2: 1200,
+                        f3: 2400,
+                        formantQ1: 6,
+                        formantQ2: 8,
+                        formantQ3: 10,
+                        ampEnv: { attack: 0.1, decay: 0.2, sustain: 0.6, release: 0.2 },
+                        pitchEnv: { attack: 0, decay: 0, sustain: 1, release: 0 },
+                        filterEnv: { attack: 0.05, decay: 0.15, sustain: 0.5, release: 0.15 }
+                    }
+                };
+            }
+            
+            loadPreset(name) {
+                return this.presets[name];
+            }
+        }
+
+        // ===========================================
+        // Main Dog Synthesizer Class
+        // ===========================================
+        
+        class DogSynthesizer {
+            constructor() {
+                this.audioContext = null;
+                this.isInitialized = false;
+                this.masterGain = null;
+                
+                this.glottalSource = null;
+                this.vocalTract = null;
+                this.formantBank = null;
+                this.noiseGen = null;
+                this.presetManager = new PresetManager();
+                
+                this.ampEnv = null;
+                this.pitchEnv = null;
+                this.filterEnv = null;
+                
+                this.currentPreset = null;
+                this.analyser = null;
+                this.oscilloscopeData = null;
+            }
+            
+            async initialize() {
+                try {
+                    log('Initializing audio context...');
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    console.log('AudioContext created, state:', this.audioContext.state);
+                    
+                    if (this.audioContext.state === 'suspended') {
+                        console.log('Audio context suspended, attempting to resume...');
+                        await this.audioContext.resume();
+                        console.log('AudioContext resumed, state:', this.audioContext.state);
+                    }
+                    
+                    // Create master gain
+                    this.masterGain = this.audioContext.createGain();
+                    this.masterGain.gain.value = 0.8; // Slightly reduced master gain
+                    this.masterGain.connect(this.audioContext.destination);
+                    
+                    // Initialize volume control
+                    this.currentVolumeNode = this.masterGain;
+                    
+                    // Initialize components
+                    this.glottalSource = new LFGlottalSource(this.audioContext);
+                    this.vocalTract = new WaveguideVocalTract(this.audioContext);
+                    this.formantBank = new FormantFilterBank(this.audioContext);
+                    this.noiseGen = new NoiseGenerator(this.audioContext);
+                    
+                    // Initialize envelopes
+                    this.ampEnv = new EnvelopeGenerator(this.audioContext);
+                    this.pitchEnv = new EnvelopeGenerator(this.audioContext);
+                    this.filterEnv = new EnvelopeGenerator(this.audioContext);
+                    
+                    // Setup analyser for visualization
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 2048;
+                    this.oscilloscopeData = new Uint8Array(this.analyser.frequencyBinCount);
+                    this.masterGain.connect(this.analyser);
+                    
+                    this.isInitialized = true;
+                    log('Audio system initialized successfully');
+                    
+                    // Start visualization
+                    this.startVisualization();
+                    
+                    return true;
+                } catch (error) {
+                    log('Failed to initialize audio: ' + error.message);
+                    return false;
+                }
+            }
+            
+            playPreset(presetName) {
+                if (!this.isInitialized) {
+                    log('Audio system not initialized');
+                    return;
+                }
+                
+                const preset = this.presetManager.loadPreset(presetName);
+                if (!preset) {
+                    log('Preset not found: ' + presetName);
+                    return;
+                }
+                
+                log('Playing preset: ' + presetName);
+                this.currentPreset = preset;
+                
+                // Update all parameters
+                this.updateParameters(preset);
+                
+                // Generate and play sound
+                this.generateSound(preset);
+            }
+            
+            updateParameters(params) {
+                // Update glottal source
+                this.glottalSource.rd = params.rd;
+                this.glottalSource.jitter = params.jitter;
+                this.glottalSource.shimmer = params.shimmer;
+                
+                // Update vocal tract
+                this.vocalTract.tractLength = params.tract;
+                this.vocalTract.constrictionPosition = params.constriction;
+                this.vocalTract.constrictionAmount = 1 - params.mouth;
+                this.vocalTract.updateTractShape();
+                
+                // Update formants with individual Q values
+                const f4 = params.f3 * 1.4; // Calculate F4 as a ratio of F3
+                this.formantBank.updateFormants(
+                    params.f1, 
+                    params.f2, 
+                    params.f3, 
+                    f4, 
+                    params.formantQ1 || 5,
+                    params.formantQ2 || 5,
+                    params.formantQ3 || 5
+                );
+                
+                // Update envelopes
+                this.ampEnv.setADSR(params.ampEnv.attack, params.ampEnv.decay, params.ampEnv.sustain, params.ampEnv.release);
+                this.pitchEnv.setADSR(params.pitchEnv.attack, params.pitchEnv.decay, params.pitchEnv.sustain, params.pitchEnv.release);
+                this.filterEnv.setADSR(params.filterEnv.attack, params.filterEnv.decay, params.filterEnv.sustain, params.filterEnv.release);
+            }
+            
+            generateSound(params) {
+                try {
+                    if (!this.audioContext) {
+                        console.error('AudioContext not initialized');
+                        return;
+                    }
+                    
+                    console.log('Generating sound with params:', params);
+                    const now = this.audioContext.currentTime;
+                    const duration = params.ampEnv.attack + params.ampEnv.decay + 0.5 + params.ampEnv.release;
+                    console.log('Sound duration:', duration, 'seconds');
+                    
+                    // Create a gain node for this sound instance
+                    const gainNode = this.audioContext.createGain();
+                    gainNode.gain.value = 0; // Start silent, envelope will control volume
+                    
+                    // Connect to master gain and then to destination
+                    gainNode.connect(this.masterGain);
+                    this.masterGain.connect(this.audioContext.destination);
+                    
+                    // Generate glottal source if pitch > 0
+                    if (params.pitch > 0) {
+                        console.log('Generating glottal source with pitch:', params.pitch);
+                        const glottalBuffer = this.glottalSource.generateGlottalWaveform(
+                            duration, 
+                            this.audioContext.sampleRate, 
+                            params.pitch
+                        );
+                        
+                        console.log('Glottal buffer created, duration:', glottalBuffer.duration);
+                        const glottalSource = this.audioContext.createBufferSource();
+                        glottalSource.buffer = glottalBuffer;
+                        
+                        // Log when playback starts/ends
+                        glottalSource.onended = () => console.log('Glottal source playback ended');
+                        
+                        // Connect glottal source through the audio chain
+                        glottalSource.connect(this.vocalTract.input);
+                        this.vocalTract.output.connect(this.formantBank.input);
+                        this.formantBank.output.connect(gainNode);
+                        
+                        // Start the source
+                        glottalSource.start(now);
+                        
+                        // Apply amplitude envelope to gain node
+                        this.ampEnv.applyEnvelope(
+                            gainNode.gain,
+                            0,                          // start value
+                            params.volume || 0.5,        // peak value (reduced to prevent clipping)
+                            0,                          // end value
+                            now,                        // start time
+                            duration                    // duration
+                        );
+                        
+                        // Store the gain node for volume control
+                        this.currentVolumeNode = gainNode;
+                        
+                        // Stop the source when done
+                        glottalSource.stop(now + duration);
+                    }
+                    
+                    // Add noise component if breathiness > 0
+                    if (params.breathiness > 0) {
+                        console.log('Adding noise component with breathiness:', params.breathiness);
+                        const { source: noiseSource, output: noiseOutput } = this.noiseGen.createColoredNoise(params.noiseColor || 0.5);
+                        const noiseGain = this.audioContext.createGain();
+                        noiseGain.gain.value = 0;
+                        
+                        // Connect noise through its own gain node
+                        noiseOutput.connect(noiseGain);
+                        noiseGain.connect(this.masterGain);
+                        
+                        // Apply envelope to noise
+                        this.ampEnv.applyEnvelope(
+                            noiseGain.gain,
+                            0,                                  // start value
+                            params.breathiness * 0.3,           // peak value
+                            0,                                  // end value
+                            now,                                // start time
+                            duration                            // duration
+                        );
+                        
+                        // Start and stop noise source
+                        noiseSource.start(now);
+                        noiseSource.stop(now + duration);
+                    }
+                } catch (error) {
+                    console.error('Error generating sound:', error);
+                }
+            }
+            
+            startVisualization() {
+                const canvas = document.getElementById('oscilloscope');
+                const ctx = canvas.getContext('2d');
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                
+                const draw = () => {
+                    requestAnimationFrame(draw);
+                    
+                    this.analyser.getByteTimeDomainData(this.oscilloscopeData);
+                    
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#00f2fe';
+                    ctx.beginPath();
+                    
+                    const sliceWidth = canvas.width / this.oscilloscopeData.length;
+                    let x = 0;
+                    
+                    for (let i = 0; i < this.oscilloscopeData.length; i++) {
+                        const v = this.oscilloscopeData[i] / 128.0;
+                        const y = v * canvas.height / 2;
+                        
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                        
+                        x += sliceWidth;
+                    }
+                    
+                    ctx.stroke();
+                };
+                
+                draw();
+            }
+        }
+
+        // ===========================================
+        // UI Controller
+        // ===========================================
+        
+        class UIController {
+            constructor(synthesizer) {
+                this.synth = synthesizer;
+                this.initializeControls();
+            }
+            
+            initializeControls() {
+                // Initialize button
+                document.getElementById('startBtn').addEventListener('click', async () => {
+                    const btn = document.getElementById('startBtn');
+                    btn.disabled = true;
+                    
+                    const success = await this.synth.initialize();
+                    if (success) {
+                        btn.textContent = 'Audio System Active';
+                        btn.style.background = 'linear-gradient(145deg, #27ae60, #2ecc71)';
+                        updateStatus('Audio system initialized - Click a preset to play', '#2ecc71');
+                        
+                            // Enable UI elements
+                        document.querySelectorAll('.preset-btn, #playBtn, #testBtn').forEach(btn => {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        });
+                    } else {
+                        btn.disabled = false;
+                        updateStatus('Failed to initialize audio', '#e74c3c');
+                    }
+                });
+                
+                // Test button (plays a simple sine wave)
+                document.getElementById('testBtn').addEventListener('click', () => {
+                    if (!this.synth.isInitialized) return;
+                    
+                    const oscillator = this.synth.audioContext.createOscillator();
+                    const gainNode = this.synth.audioContext.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = 440; // A4 note
+                    gainNode.gain.value = 0.5;
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.synth.audioContext.destination);
+                    
+                    oscillator.start();
+                    updateStatus('Playing test tone...', '#3498db');
+                    
+                    // Stop after 1 second
+                    setTimeout(() => {
+                        oscillator.stop();
+                        updateStatus('Test complete', '#2ecc71');
+                    }, 1000);
+                });
+                
+                // Play button
+                document.getElementById('playBtn').addEventListener('click', () => {
+                    if (!this.synth.isInitialized) return;
+                    
+                    // Get current parameters from UI
+                    const params = this.getCurrentParameters();
+                    
+                    // Update synth with current parameters
+                    this.synth.updateParameters(params);
+                    
+                    // Generate and play the sound
+                    this.synth.generateSound(params);
+                    updateStatus('Playing current settings...', '#9b59b6');
+                });
+                
+                // Setup preset buttons
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        if (!this.synth.isInitialized) {
+                            updateStatus('Please initialize the audio system first', '#e74c3c');
+                            return;
+                        }
+                        
+                        const presetName = btn.getAttribute('data-preset');
+                        // First update UI to show the preset parameters
+                        const preset = this.synth.presetManager.loadPreset(presetName);
+                        if (!preset) {
+                            updateStatus(`Preset '${presetName}' not found`, '#e74c3c');
+                            return;
+                        }
+                        
+                        // Update all UI controls
+                        this.updateUIFromPreset(preset);
+                        
+                        // Play the sound
+                        this.synth.playPreset(presetName);
+                        updateStatus(`Playing ${presetName} sound...`, '#4facfe');
+                    });
+                });
+                
+                // Parameter sliders
+                this.setupSliders();
+                
+                // ADSR controls
+                this.setupADSRControls();
+                
+                // Setup volume control
+                const volumeSlider = document.getElementById('masterVolume');
+                const volumeDisplay = document.getElementById('masterVolume-display');
+                
+                volumeSlider.addEventListener('input', (e) => {
+                    const volume = parseFloat(e.target.value);
+                    volumeDisplay.textContent = volume.toFixed(2);
+                    if (this.synth && this.synth.currentVolumeNode) {
+                        this.synth.currentVolumeNode.gain.setValueAtTime(volume, this.synth.audioContext.currentTime);
+                    }
+                });
+                
+                // Set initial volume display
+                volumeDisplay.textContent = volumeSlider.value;
+            }
+            
+            setupSliders() {
+                const sliders = [
+                    { id: 'pitch', display: 'Hz' },
+                    { id: 'rd', display: '' },
+                    { id: 'jitter', display: '' },
+                    { id: 'shimmer', display: '' },
+                    { id: 'tract', display: ' cm' },
+                    { id: 'constriction', display: '' },
+                    { id: 'mouth', display: '' },
+                    { id: 'nasality', display: '' },
+                    { id: 'breathiness', display: '' },
+                    { id: 'turbulence', display: '' },
+                    { id: 'noiseColor', display: '' },
+                    { id: 'f1', display: ' Hz' },
+                    { id: 'f2', display: ' Hz' },
+                    { id: 'f3', display: ' Hz' },
+                    { id: 'formantQ1', display: '' },
+                    { id: 'formantQ2', display: '' },
+                    { id: 'formantQ3', display: '' }
+                ];
+                
+                sliders.forEach(slider => {
+                    const element = document.getElementById(slider.id);
+                    const display = document.getElementById(slider.id + '-display');
+                    
+                    element.addEventListener('input', (e) => {
+                        const value = parseFloat(e.target.value);
+                        display.textContent = value + slider.display;
+                    });
+                });
+            }
+            
+            setupADSRControls() {
+                const envTypes = ['amp', 'pitch', 'filter'];
+                const params = ['attack', 'decay', 'sustain', 'release'];
+                
+                envTypes.forEach(env => {
+                    params.forEach(param => {
+                        const id = `${env}-${param}`;
+                        const element = document.getElementById(id);
+                        const display = document.getElementById(id + '-display');
+                        
+                        element.addEventListener('input', (e) => {
+                            const value = parseFloat(e.target.value);
+                            if (param === 'sustain') {
+                                display.textContent = value.toFixed(2);
+                            } else {
+                                display.textContent = value.toFixed(3) + 's';
+                            }
+                        });
+                    });
+                });
+            }
+            
+            updateUIFromPreset(preset) {
+                // Update main parameters
+                document.getElementById('pitch').value = preset.pitch;
+                document.getElementById('pitch-display').textContent = preset.pitch + ' Hz';
+                
+                document.getElementById('rd').value = preset.rd;
+                document.getElementById('rd-display').textContent = preset.rd;
+                
+                document.getElementById('jitter').value = preset.jitter;
+                document.getElementById('jitter-display').textContent = preset.jitter;
+                
+                document.getElementById('shimmer').value = preset.shimmer;
+                document.getElementById('shimmer-display').textContent = preset.shimmer;
+                
+                document.getElementById('tract').value = preset.tract;
+                document.getElementById('tract-display').textContent = preset.tract + ' cm';
+                
+                document.getElementById('constriction').value = preset.constriction;
+                document.getElementById('constriction-display').textContent = preset.constriction;
+                
+                document.getElementById('mouth').value = preset.mouth;
+                document.getElementById('mouth-display').textContent = preset.mouth;
+                
+                document.getElementById('nasality').value = preset.nasality;
+                document.getElementById('nasality-display').textContent = preset.nasality;
+                
+                document.getElementById('breathiness').value = preset.breathiness;
+                document.getElementById('breathiness-display').textContent = preset.breathiness;
+                
+                document.getElementById('turbulence').value = preset.turbulence;
+                document.getElementById('turbulence-display').textContent = preset.turbulence;
+                
+                document.getElementById('noiseColor').value = preset.noiseColor;
+                document.getElementById('noiseColor-display').textContent = preset.noiseColor;
+                
+                document.getElementById('f1').value = preset.f1;
+                document.getElementById('f1-display').textContent = preset.f1 + ' Hz';
+                
+                document.getElementById('f2').value = preset.f2;
+                document.getElementById('f2-display').textContent = preset.f2 + ' Hz';
+                
+                document.getElementById('f3').value = preset.f3;
+                document.getElementById('f3-display').textContent = preset.f3 + ' Hz';
+                
+                document.getElementById('formantQ').value = preset.formantQ;
+                document.getElementById('formantQ-display').textContent = preset.formantQ;
+                
+                // Update ADSR envelopes
+                this.updateADSR('amp', preset.ampEnv);
+                this.updateADSR('pitch', preset.pitchEnv);
+                this.updateADSR('filter', preset.filterEnv);
+            }
+            
+            updateADSR(type, envelope) {
+                document.getElementById(`${type}-attack`).value = envelope.attack;
+                document.getElementById(`${type}-attack-display`).textContent = envelope.attack.toFixed(3) + 's';
+                
+                document.getElementById(`${type}-decay`).value = envelope.decay;
+                document.getElementById(`${type}-decay-display`).textContent = envelope.decay.toFixed(3) + 's';
+                
+                document.getElementById(`${type}-sustain`).value = envelope.sustain;
+                document.getElementById(`${type}-sustain-display`).textContent = envelope.sustain.toFixed(2);
+                
+                document.getElementById(`${type}-release`).value = envelope.release;
+                document.getElementById(`${type}-release-display`).textContent = envelope.release.toFixed(3) + 's';
+            }
+            
+            getCurrentParameters() {
+                return {
+                    pitch: parseFloat(document.getElementById('pitch').value),
+                    rd: parseFloat(document.getElementById('rd').value),
+                    jitter: parseFloat(document.getElementById('jitter').value),
+                    shimmer: parseFloat(document.getElementById('shimmer').value),
+                    tract: parseFloat(document.getElementById('tract').value),
+                    constriction: parseFloat(document.getElementById('constriction').value),
+                    mouth: parseFloat(document.getElementById('mouth').value),
+                    nasality: parseFloat(document.getElementById('nasality').value),
+                    breathiness: parseFloat(document.getElementById('breathiness').value),
+                    turbulence: parseFloat(document.getElementById('turbulence').value),
+                    noiseColor: parseFloat(document.getElementById('noiseColor').value),
+                    f1: parseFloat(document.getElementById('f1').value),
+                    f2: parseFloat(document.getElementById('f2').value),
+                    f3: parseFloat(document.getElementById('f3').value),
+                    formantQ1: parseFloat(document.getElementById('formantQ1').value),
+                    formantQ2: parseFloat(document.getElementById('formantQ2').value),
+                    formantQ3: parseFloat(document.getElementById('formantQ3').value),
+                    ampEnv: {
+                        attack: parseFloat(document.getElementById('amp-attack').value),
+                        decay: parseFloat(document.getElementById('amp-decay').value),
+                        sustain: parseFloat(document.getElementById('amp-sustain').value),
+                        release: parseFloat(document.getElementById('amp-release').value)
+                    },
+                    pitchEnv: {
+                        attack: parseFloat(document.getElementById('pitch-attack').value),
+                        decay: parseFloat(document.getElementById('pitch-decay').value),
+                        sustain: parseFloat(document.getElementById('pitch-sustain').value),
+                        release: parseFloat(document.getElementById('pitch-release').value)
+                    },
+                    filterEnv: {
+                        attack: parseFloat(document.getElementById('filter-attack').value),
+                        decay: parseFloat(document.getElementById('filter-decay').value),
+                        sustain: parseFloat(document.getElementById('filter-sustain').value),
+                        release: parseFloat(document.getElementById('filter-release').value)
+                    }
+                };
+            }
+        }
+
+        // ===========================================
+        // Initialize Application
+        // ===========================================
+        
+        const synthesizer = new DogSynthesizer();
+        const ui = new UIController(synthesizer);
+        
+        log('Advanced Dog Voice Synthesizer loaded');
+    </script>
+</body>
+</html>
