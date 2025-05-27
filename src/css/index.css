@@ -102,6 +102,16 @@ button:disabled {
     min-width: 100px;
 }
 
+.play-btn {
+    background: linear-gradient(145deg, #f39c12, #e67e22);
+    min-width: 100px;
+}
+
+.play-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
 .preset-btn:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);

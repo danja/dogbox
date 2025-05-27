@@ -10,8 +10,8 @@ export class LFGlottalSource {
         
         // Create audio nodes
         this.osc = audioContext.createOscillator();
-        this.osc.type = 'sine';
-        this.osc.frequency.value = this.f0;
+        this.osc.type = 'sawtooth'; // Changed to sawtooth for more harmonic content
+        this.osc.frequency.setValueAtTime(this.f0, audioContext.currentTime);
         
         // Create gain for amplitude control
         this.gain = audioContext.createGain();
@@ -23,8 +23,16 @@ export class LFGlottalSource {
         // Start oscillator
         this.osc.start();
         
+        // Set initial volume
+        this.gain.gain.value = 0.5;
+        
+        // Track active notes
+        this.activeNotes = new Map();
+        
         // Setup event listeners
         this.setupEventListeners();
+        
+        console.log('LFGlottalSource initialized');
     }
     
     setupEventListeners() {
@@ -42,12 +50,12 @@ export class LFGlottalSource {
             }
         });
         
-        eventBus.on(events.NOTE_ON, ({ frequency, velocity }) => {
-            this.noteOn(0, velocity, frequency);
+        eventBus.on(events.NOTE_ON, ({ frequency, velocity, time }) => {
+            this.noteOn(time, velocity, frequency);
         });
         
-        eventBus.on(events.NOTE_OFF, () => {
-            this.noteOff();
+        eventBus.on(events.NOTE_OFF, ({ time } = {}) => {
+            this.noteOff(time);
         });
     }
     
@@ -67,31 +75,119 @@ export class LFGlottalSource {
         this.gain.disconnect();
     }
     
-    noteOn(time = 0, velocity = 1.0, frequency) {
-        if (frequency) {
-            this.setFrequency(frequency);
+    noteOn(time = this.audioContext.currentTime, velocity = 1.0, frequency, id) {
+        try {
+            if (!this.audioContext) {
+                console.error('AudioContext not available');
+                return;
+            }
+            
+            const now = this.audioContext.currentTime;
+            const startTime = Math.max(now, time);
+            
+            // Create a new gain node for this note
+            const noteGain = this.audioContext.createGain();
+            noteGain.gain.value = 0;
+            
+            // Connect the oscillator through this gain node
+            this.osc.disconnect();
+            this.osc.connect(noteGain);
+            noteGain.connect(this.gain);
+            
+            // Set frequency if provided, otherwise use current
+            if (frequency) {
+                this.setFrequency(frequency);
+            } else {
+                frequency = this.f0;
+            }
+            
+            // Apply shimmer to amplitude
+            const shimmerFactor = 1 + (Math.random() * 2 - 1) * (this.shimmer || 0);
+            const amp = Math.min(1, velocity * shimmerFactor);
+            
+            console.log(`NoteOn [${id || 'unknown'}]: time=${time.toFixed(3)}, freq=${frequency}, vel=${velocity}, amp=${amp.toFixed(3)}`);
+            
+            // Schedule the note on
+            noteGain.gain.cancelScheduledValues(now);
+            noteGain.gain.setValueAtTime(0, now);
+            
+            if (startTime > now) {
+                // If starting in the future, set a ramp
+                noteGain.gain.linearRampToValueAtTime(0, startTime);
+                noteGain.gain.linearRampToValueAtTime(amp, startTime + 0.01);
+            } else {
+                // Start immediately
+                noteGain.gain.linearRampToValueAtTime(amp, now + 0.01);
+            }
+            
+            // Store the note
+            if (id) {
+                this.activeNotes.set(id, {
+                    gain: noteGain,
+                    startTime: now
+                });
+            }
+            
+        } catch (error) {
+            console.error('Error in noteOn:', error);
         }
-        
-        const now = this.audioContext.currentTime;
-        const gain = this.gain.gain;
-        
-        // Apply shimmer to amplitude
-        const shimmerFactor = 1 + (Math.random() * 2 - 1) * this.shimmer;
-        const amp = Math.min(1, velocity * shimmerFactor);
-        
-        // Quick attack
-        gain.cancelScheduledValues(now);
-        gain.setValueAtTime(0, now);
-        gain.linearRampToValueAtTime(amp, now + 0.01);
     }
     
-    noteOff(time = 0) {
-        const now = this.audioContext.currentTime;
-        const gain = this.gain.gain;
-        
-        // Quick release
-        gain.cancelScheduledValues(now);
-        gain.setValueAtTime(gain.value, now);
-        gain.linearRampToValueAtTime(0, now + 0.1);
+    noteOff(time = this.audioContext?.currentTime, id) {
+        try {
+            if (!this.audioContext) {
+                console.error('AudioContext not available in noteOff');
+                return;
+            }
+            
+            const now = this.audioContext.currentTime;
+            const releaseTime = Math.max(now, time || now);
+            
+            if (id && this.activeNotes.has(id)) {
+                // Handle specific note
+                const note = this.activeNotes.get(id);
+                const gain = note.gain.gain;
+                const currentValue = gain.value;
+                
+                console.log(`NoteOff [${id}]: time=${releaseTime.toFixed(3)}, currentValue=${currentValue.toFixed(3)}`);
+                
+                // Schedule the release
+                gain.cancelScheduledValues(now);
+                gain.setValueAtTime(currentValue, now);
+                
+                if (releaseTime > now) {
+                    // If releasing in the future, schedule it
+                    gain.linearRampToValueAtTime(currentValue, releaseTime);
+                    gain.linearRampToValueAtTime(0, releaseTime + 0.1);
+                } else {
+                    // Release immediately
+                    gain.linearRampToValueAtTime(0, now + 0.1);
+                }
+                
+                // Clean up after release
+                setTimeout(() => {
+                    if (this.activeNotes.has(id)) {
+                        const noteToClean = this.activeNotes.get(id);
+                        noteToClean.gain.disconnect();
+                        this.activeNotes.delete(id);
+                    }
+                }, (releaseTime - now + 0.15) * 1000); // Slightly longer than the release time
+                
+            } else if (!id) {
+                // Fallback: if no ID, use the main gain
+                const gain = this.gain.gain;
+                const currentValue = gain.value;
+                
+                console.log(`NoteOff [all]: time=${releaseTime.toFixed(3)}, currentValue=${currentValue.toFixed(3)}`);
+                
+                // Schedule the release
+                gain.cancelScheduledValues(now);
+                gain.setValueAtTime(currentValue, now);
+                gain.linearRampToValueAtTime(0, releaseTime + 0.1);
+            }
+            
+        } catch (error) {
+            console.error('Error in noteOff:', error);
+        }
     }
 }

@@ -44,12 +44,23 @@ export class DogSynthesizer {
             this.output.gain.value = 0.5;
             debug('Output gain node created');
             
-            // Connect components
-            this.glottis.connect(this.formants.input);
-            this.noise.connect(this.formants.input);
+            // Create a gain node for mixing glottis and noise
+            this.mixer = this.audioContext.createGain();
+            this.mixer.gain.value = 1.0;
+            
+            // Connect components with proper routing
+            this.glottis.connect(this.mixer);
+            this.noise.connect(this.mixer);
+            this.mixer.connect(this.formants.input);
             this.formants.connect(this.output);
             this.output.connect(this.audioContext.destination);
             debug('Audio nodes connected');
+            
+            // Set initial volume to a safe level
+            this.output.gain.value = 0.5;
+            
+            // Keep track of active notes
+            this.activeNotes = new Set();
             
         } catch (error) {
             console.error('Error initializing DogSynthesizer:', error);
@@ -108,12 +119,25 @@ export class DogSynthesizer {
         }
     }
     
-    // Update all parameters
+    // Update all parameters without triggering events
     updateParams() {
-        // Update all parameters
+        // Update all parameters directly without emitting events
+        // to prevent infinite loops
         Object.entries(this.params).forEach(([param, value]) => {
-            eventBus.emit(events.PARAM_CHANGE, { param, value });
+            // Update the glottis, noise, and formants directly
+            if (this.glottis && typeof this.glottis.setParam === 'function') {
+                this.glottis.setParam(param, value);
+            }
+            if (this.noise && typeof this.noise.setParam === 'function') {
+                this.noise.setParam(param, value);
+            }
+            if (this.formants && typeof this.formants.setParam === 'function') {
+                this.formants.setParam(param, value);
+            }
         });
+        
+        // Update formants specifically if needed
+        this.updateFormants();
     }
     
     // Update formant-related parameters
@@ -141,15 +165,55 @@ export class DogSynthesizer {
     
     // Play a note
     playNote(duration = 1.0, velocity = 0.7) {
-        eventBus.emit(events.NOTE_ON, {
-            frequency: this.params.pitch,
-            velocity
-        });
-        
-        // Schedule note off
-        setTimeout(() => {
-            eventBus.emit(events.NOTE_OFF);
-        }, duration * 1000);
+        try {
+            if (!this.audioContext) {
+                console.error('Cannot play note: AudioContext not available');
+                return;
+            }
+            
+            const now = this.audioContext.currentTime;
+            const endTime = now + Math.max(0.1, duration); // Ensure minimum duration
+            const noteId = `${now}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            console.log(`Playing note [${noteId}]: duration=${duration}s, velocity=${velocity}, pitch=${this.params.pitch}Hz`);
+            
+            // Store active note
+            this.activeNotes.add(noteId);
+            
+            // Emit note on with current time
+            eventBus.emit(events.NOTE_ON, {
+                frequency: this.params.pitch,
+                velocity,
+                time: now,
+                id: noteId
+            });
+            
+            // Schedule note off using audio context timing
+            const noteOffEvent = () => {
+                if (this.activeNotes.has(noteId)) {
+                    eventBus.emit(events.NOTE_OFF, {
+                        time: this.audioContext.currentTime,
+                        id: noteId
+                    });
+                    this.activeNotes.delete(noteId);
+                }
+            };
+            
+            // Schedule the note off
+            const timeout = setTimeout(noteOffEvent, (endTime - now) * 1000);
+            
+            // Store timeout for cleanup
+            this.activeNotes.add({
+                id: noteId,
+                timeout: timeout,
+                cancel: () => clearTimeout(timeout)
+            });
+            
+            console.log(`Scheduled note off [${noteId}] at: ${endTime.toFixed(3)}s`);
+            
+        } catch (error) {
+            console.error('Error in playNote:', error);
+        }
     }
     
     // Connect to audio destination

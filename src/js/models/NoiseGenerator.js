@@ -16,8 +16,11 @@ export class NoiseGenerator {
         // Create filter for noise color
         this.filter = audioContext.createBiquadFilter();
         this.filter.type = 'bandpass';
-        this.filter.frequency.value = 1000;
-        this.filter.Q.value = 0.5;
+        this.filter.frequency.setValueAtTime(1000, audioContext.currentTime);
+        this.filter.Q.value = 1.0; // Slightly higher Q for more pronounced effect
+        
+        // Set initial gain to 0 (will be controlled by note events)
+        this.gain.gain.value = 0;
         
         // Connect nodes
         this.noise.connect(this.filter);
@@ -42,8 +45,12 @@ export class NoiseGenerator {
             }
         });
         
-        eventBus.on(events.NOTE_ON, ({ velocity }) => {
-            this.trigger(velocity);
+        eventBus.on(events.NOTE_ON, ({ velocity, time }) => {
+            this.noteOn(time, velocity);
+        });
+        
+        eventBus.on(events.NOTE_OFF, ({ time } = {}) => {
+            this.noteOff(time);
         });
     }
     
@@ -82,16 +89,51 @@ export class NoiseGenerator {
         this.gain.disconnect();
     }
     
-    trigger(level = 0.5, duration = 1.0) {
+    noteOn(time = this.audioContext.currentTime, velocity = 0.5) {
         const now = this.audioContext.currentTime;
+        const startTime = Math.max(now, time);
         const gain = this.gain.gain;
         
-        // Quick attack
+        // Schedule the note on
         gain.cancelScheduledValues(now);
         gain.setValueAtTime(0, now);
-        gain.linearRampToValueAtTime(level, now + 0.01);
         
-        // Release
-        gain.linearRampToValueAtTime(0, now + duration);
+        if (startTime > now) {
+            // If starting in the future, set a ramp
+            gain.linearRampToValueAtTime(0, startTime);
+            gain.linearRampToValueAtTime(velocity, startTime + 0.01);
+        } else {
+            // Start immediately
+            gain.linearRampToValueAtTime(velocity, now + 0.01);
+        }
+    }
+    
+    noteOff(time = this.audioContext.currentTime) {
+        const now = this.audioContext.currentTime;
+        const releaseTime = Math.max(now, time);
+        const gain = this.gain.gain;
+        
+        // Get current value at the release time
+        const currentValue = gain.value;
+        
+        // Schedule the release
+        gain.cancelScheduledValues(now);
+        gain.setValueAtTime(currentValue, now);
+        
+        if (releaseTime > now) {
+            // If releasing in the future, schedule it
+            gain.linearRampToValueAtTime(currentValue, releaseTime);
+            gain.linearRampToValueAtTime(0, releaseTime + 0.1);
+        } else {
+            // Release immediately
+            gain.linearRampToValueAtTime(0, now + 0.1);
+        }
+    }
+    
+    // For backward compatibility
+    trigger(velocity = 0.5, duration = 1.0) {
+        const now = this.audioContext.currentTime;
+        this.noteOn(now, velocity);
+        this.noteOff(now + duration);
     }
 }
