@@ -34,22 +34,48 @@ export class NoiseGenerator {
     }
     
     setupEventListeners() {
+        // Only log parameter changes in development
+        const debug = false;
+        
         eventBus.on(events.PARAM_CHANGE, ({ param, value }) => {
-            switch (param) {
-                case 'breathiness':
-                    this.setLevel(value);
-                    break;
-                case 'noiseColor':
-                    this.setFrequency(value);
-                    break;
+            if (debug) console.log(`NoiseGenerator: ${param} = ${value}`);
+            
+            try {
+                const numValue = parseFloat(value);
+                const now = this.audioContext.currentTime;
+                
+                switch (param) {
+                    case 'breathiness':
+                        this.gain.gain.cancelScheduledValues(now);
+                        this.gain.gain.setValueAtTime(numValue, now);
+                        break;
+                    case 'noiseColor':
+                        this.filter.frequency.cancelScheduledValues(now);
+                        this.filter.frequency.setValueAtTime(numValue, now);
+                        break;
+                    case 'noiseQ':
+                    case 'q':
+                        this.filter.Q.cancelScheduledValues(now);
+                        this.filter.Q.setValueAtTime(Math.max(0.1, numValue), now);
+                        break;
+                    case 'amp':
+                    case 'gain':
+                        this.gain.gain.cancelScheduledValues(now);
+                        this.gain.gain.setValueAtTime(numValue, now);
+                        break;
+                }
+            } catch (error) {
+                if (debug) console.error(`Error handling ${param}:`, error);
             }
         });
         
-        eventBus.on(events.NOTE_ON, ({ velocity, time }) => {
+        eventBus.on(events.NOTE_ON, (event = {}) => {
+            const { velocity = 0.5, time } = event;
             this.noteOn(time, velocity);
         });
         
-        eventBus.on(events.NOTE_OFF, ({ time } = {}) => {
+        eventBus.on(events.NOTE_OFF, (event = {}) => {
+            const { time } = event;
             this.noteOff(time);
         });
     }

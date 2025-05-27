@@ -36,26 +36,56 @@ export class LFGlottalSource {
     }
     
     setupEventListeners() {
+        // Only log parameter changes in development
+        const debug = false;
+        
         eventBus.on(events.PARAM_CHANGE, ({ param, value }) => {
-            switch (param) {
-                case 'pitch':
-                    this.setFrequency(value);
-                    break;
-                case 'jitter':
-                    this.jitter = value;
-                    break;
-                case 'shimmer':
-                    this.shimmer = value;
-                    break;
+            if (debug) console.log(`LFGlottalSource: ${param} = ${value}`);
+            
+            try {
+                const numValue = parseFloat(value);
+                const now = this.audioContext.currentTime;
+                
+                switch (param) {
+                    case 'pitch':
+                        this.f0 = numValue;
+                        this.osc.frequency.cancelScheduledValues(now);
+                        this.osc.frequency.setValueAtTime(numValue, now);
+                        break;
+                    case 'jitter':
+                        this.jitter = numValue;
+                        break;
+                    case 'shimmer':
+                        this.shimmer = numValue;
+                        break;
+                    case 'amp':
+                    case 'gain':
+                        // Direct gain control
+                        this.gain.gain.cancelScheduledValues(now);
+                        this.gain.gain.setValueAtTime(numValue, now);
+                        break;
+                    case 'amp-attack':
+                    case 'amp-decay':
+                    case 'amp-sustain':
+                    case 'amp-release':
+                        if (this.envelope?.setParam) {
+                            this.envelope.setParam(param, numValue);
+                        }
+                        break;
+                }
+            } catch (error) {
+                if (debug) console.error(`Error handling ${param}:`, error);
             }
         });
         
-        eventBus.on(events.NOTE_ON, ({ frequency, velocity, time }) => {
-            this.noteOn(time, velocity, frequency);
+        eventBus.on(events.NOTE_ON, (event = {}) => {
+            const { frequency, velocity = 0.7, time, id } = event;
+            this.noteOn(time, velocity, frequency, id);
         });
         
-        eventBus.on(events.NOTE_OFF, ({ time } = {}) => {
-            this.noteOff(time);
+        eventBus.on(events.NOTE_OFF, (event = {}) => {
+            const { time, id } = event;
+            this.noteOff(time, id);
         });
     }
     

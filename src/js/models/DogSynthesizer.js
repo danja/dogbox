@@ -106,16 +106,76 @@ export class DogSynthesizer {
     
     // Set a parameter value
     setParam(param, value) {
-        if (this.params.hasOwnProperty(param)) {
-            this.params[param] = value;
+        // Only log parameter changes in development
+        const debug = false;
+        
+        if (!this.params.hasOwnProperty(param)) {
+            if (debug) console.warn(`Unknown parameter: ${param}`);
+            return;
+        }
+        
+        try {
+            // Convert to number if it's a numeric parameter
+            const numValue = typeof this.params[param] === 'number' ? parseFloat(value) : value;
+            const currentValue = this.params[param];
+            
+            // Skip if value hasn't changed (within floating point precision)
+            if (typeof numValue === 'number' && Math.abs(numValue - currentValue) < 0.0001) {
+                return;
+            }
+            
+            this.params[param] = numValue;
+            if (debug) console.log(`Setting parameter: ${param} = ${numValue}`);
+            
+            // Direct parameter handling for performance
+            const now = this.audioContext?.currentTime || 0;
+            
+            // Handle common parameters directly
+            switch (param) {
+                case 'pitch':
+                case 'jitter':
+                case 'shimmer':
+                    if (this.glottis) {
+                        this.glottis.setParam(param, numValue);
+                    }
+                    break;
+                    
+                case 'breathiness':
+                case 'noiseColor':
+                case 'noiseQ':
+                case 'q':
+                    if (this.noise) {
+                        this.noise.setParam(param, numValue);
+                    }
+                    break;
+                    
+                case 'formants':
+                    if (this.formants) {
+                        this.formants.setParam(param, numValue);
+                        this.updateFormants();
+                    }
+                    break;
+                    
+                case 'amp':
+                case 'gain':
+                    if (this.output) {
+                        this.output.gain.cancelScheduledValues(now);
+                        this.output.gain.setValueAtTime(numValue, now);
+                    }
+                    break;
+                    
+                default:
+                    // For envelope parameters and others
+                    if (this.envelope?.setParam) {
+                        this.envelope.setParam(param, numValue);
+                    }
+            }
             
             // Emit the parameter change event
-            eventBus.emit(events.PARAM_CHANGE, { param, value });
+            eventBus.emit(events.PARAM_CHANGE, { param, value: numValue });
             
-            // Special handling for formant parameters
-            if (param.startsWith('formant')) {
-                this.updateFormants();
-            }
+        } catch (error) {
+            if (debug) console.error(`Error setting ${param}:`, error);
         }
     }
     
