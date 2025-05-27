@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Dog Voice Synthesizer</title>
-    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="/css/index.css">
 </head>
+
 <body>
     <div class="container">
         <h1>🐕 Advanced Dog Voice Synthesizer</h1>
-        
+
         <div class="button-group">
             <button id="startBtn" class="start-button">Initialize Audio System</button>
             <button id="testBtn" class="test-button" disabled>Test Audio</button>
         </div>
-        
+
         <div id="status" class="status">Click Initialize to begin</div>
-        
+
         <div class="preset-buttons">
             <button class="preset-btn" data-preset="bark">Bark</button>
             <button class="preset-btn" data-preset="whine">Whine</button>
@@ -24,7 +26,7 @@
             <button class="preset-btn" data-preset="pant">Pant</button>
             <button id="playBtn" class="play-btn" disabled>▶ Play</button>
         </div>
-        
+
         <div class="control-panel">
             <!-- Glottal Source Controls -->
             <div class="control-section">
@@ -36,7 +38,7 @@
                     </div>
                     <input type="range" id="pitch" min="50" max="1000" step="1" value="220" class="slider">
                 </div>
-                
+
                 <div class="slider-group">
                     <div class="slider-label">
                         <span>Jitter</span>
@@ -44,7 +46,7 @@
                     </div>
                     <input type="range" id="jitter" min="0" max="0.2" step="0.01" value="0.05" class="slider">
                 </div>
-                
+
                 <div class="slider-group">
                     <div class="slider-label">
                         <span>Shimmer</span>
@@ -53,7 +55,7 @@
                     <input type="range" id="shimmer" min="0" max="0.5" step="0.01" value="0.08" class="slider">
                 </div>
             </div>
-            
+
             <!-- Vocal Tract Controls -->
             <div class="control-section">
                 <h3>Vocal Tract</h3>
@@ -64,7 +66,7 @@
                     </div>
                     <input type="range" id="tract" min="5" max="20" step="0.1" value="12.0" class="slider">
                 </div>
-                
+
                 <div class="slider-group">
                     <div class="slider-label">
                         <span>Constriction</span>
@@ -72,7 +74,7 @@
                     </div>
                     <input type="range" id="constriction" min="0" max="1" step="0.01" value="0.3" class="slider">
                 </div>
-                
+
                 <div class="slider-group">
                     <div class="slider-label">
                         <span>Mouth</span>
@@ -81,7 +83,7 @@
                     <input type="range" id="mouth" min="0" max="1" step="0.01" value="0.4" class="slider">
                 </div>
             </div>
-            
+
             <!-- Formant Controls -->
             <div class="control-section">
                 <h3>Formants</h3>
@@ -92,7 +94,7 @@
                     </div>
                     <input type="range" id="f1" min="200" max="1000" step="1" value="650" class="slider">
                 </div>
-                
+
                 <div class="slider-group">
                     <div class="slider-label">
                         <span>F2 Freq</span>
@@ -100,7 +102,7 @@
                     </div>
                     <input type="range" id="f2" min="500" max="2500" step="1" value="1100" class="slider">
                 </div>
-                
+
                 <div class="slider-group">
                     <div class="slider-label">
                         <span>F3 Freq</span>
@@ -109,7 +111,7 @@
                     <input type="range" id="f3" min="1000" max="4000" step="1" value="2200" class="slider">
                 </div>
             </div>
-            
+
             <!-- Noise Controls -->
             <div class="control-section">
                 <h3>Noise</h3>
@@ -120,7 +122,7 @@
                     </div>
                     <input type="range" id="breathiness" min="0" max="1" step="0.01" value="0.1" class="slider">
                 </div>
-                
+
                 <div class="slider-group">
                     <div class="slider-label">
                         <span>Noise Color</span>
@@ -130,7 +132,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- ADSR Envelopes -->
         <div class="control-section">
             <h3>ADSR Envelopes</h3>
@@ -155,7 +157,7 @@
                         <input type="range" id="amp-release" min="0" max="2" step="0.01" value="0.2" class="slider">
                     </div>
                 </div>
-                
+
                 <!-- Pitch Envelope -->
                 <div class="control-section">
                     <h4>Pitch</h4>
@@ -176,7 +178,7 @@
                         <input type="range" id="pitch-release" min="0" max="2" step="0.01" value="0.1" class="slider">
                     </div>
                 </div>
-                
+
                 <!-- Filter Envelope -->
                 <div class="control-section">
                     <h4>Filter</h4>
@@ -199,7 +201,7 @@
                 </div>
             </div>
         </div>
-        
+
         <canvas id="oscilloscope" class="oscilloscope"></canvas>
         <div id="debug" class="debug-log">System ready...</div>
     </div>
@@ -207,4 +209,5 @@
     <!-- Main application script -->
     <script type="module" src="../js/app.js"></script>
 </body>
+
 </html>

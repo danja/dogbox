@@ -2,7 +2,7 @@
 
 A web-based synthesizer that generates realistic dog vocalizations using the Web Audio API. This project implements a formant-based synthesis approach with additional features like jitter, shimmer, and breathiness controls to create a wide range of dog sounds.
 
-*nudge*
+[Demo](https://danja.github.io/dogbox/)
 
 ## Features
 
@@ -17,7 +17,6 @@ A web-based synthesizer that generates realistic dog vocalizations using the Web
 
 ```
 src/
-├── assets/           # Static assets (images, audio samples)
 ├── css/              # Stylesheets
 ├── html/             # HTML templates
 └── js/               # JavaScript source files
