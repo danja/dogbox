@@ -1108,17 +1108,17 @@
                             params.pitch
                         );
                         
-                        console.log('Glottal buffer created, duration:', glottalBuffer.duration);
+                        console.log('Glottal buffer created, duration:', glottalBuffer.duration, 'sample rate:', this.audioContext.sampleRate);
                         const glottalSource = this.audioContext.createBufferSource();
                         glottalSource.buffer = glottalBuffer;
                         
                         // Log when playback starts/ends
                         glottalSource.onended = () => console.log('Glottal source playback ended');
                         
-                        // Connect glottal source through the audio chain
-                        glottalSource.connect(this.vocalTract.input);
-                        this.vocalTract.output.connect(this.formantBank.input);
-                        this.formantBank.output.connect(gainNode);
+                        // Connect through vocal tract and formants
+                        glottalSource.connect(gainNode);
+                        this.vocalTract.connect(gainNode, this.formantBank.formants[0]);
+                        this.formantBank.connect(this.formantBank.formants[0], this.masterGain);
                         
                         // Start the source
                         glottalSource.start(now);

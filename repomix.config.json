@@ -1,0 +1,26 @@
+{
+    "output": {
+        "filePath": "./atuin_repomix.md",
+        "headerText": "atuin Source Code",
+        "removeComments": true
+    },
+    "ignore": {
+        "useDefaultPatterns": true,
+        "customPatterns": [
+            "old",
+            "dist",
+            "js/lib",
+            "docs",
+            ".env",
+            "knowledge",
+            "**/_*/**",
+            "_*",
+            "**/_*",
+            "**/webpack/*",
+            "*.log",
+            "**/*repomix*",
+            "**/*old*",
+            "**/*prompt*"
+        ]
+    }
+}
