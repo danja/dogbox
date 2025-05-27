@@ -2,6 +2,8 @@
 
 A web-based synthesizer that generates realistic dog vocalizations using the Web Audio API. This project implements a formant-based synthesis approach with additional features like jitter, shimmer, and breathiness controls to create a wide range of dog sounds.
 
+*nudge*
+
 ## Features
 
 - **Formant-based synthesis** for realistic dog vocalizations
