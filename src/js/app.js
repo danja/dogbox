@@ -1,4 +1,5 @@
 // Main application entry point
+import '../css/index.css';
 import { SynthController } from './controllers/SynthController.js';
 
 // Initialize the application when the DOM is loaded

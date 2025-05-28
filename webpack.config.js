@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,20 +14,31 @@ export default {
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'js/[name].bundle.js',
-    chunkFilename: 'js/[name].[chunkhash].js',
+    filename: 'js/[name].[contenthash].bundle.js',
+    chunkFilename: 'js/[name].[contenthash].chunk.js',
     clean: true,
-    publicPath: '/',
+    publicPath: './',  // Changed from '/' to './' for relative paths
+    assetModuleFilename: 'assets/[hash][ext][query]',
   },
   devtool: 'source-map',
   devServer: {
     static: {
       directory: path.join(__dirname, 'dist'),
+      publicPath: '/',
     },
     compress: true,
     port: 9000,
     hot: true,
-    historyApiFallback: true,
+    historyApiFallback: {
+      index: 'index.html',
+      disableDotRule: true,
+    },
+    client: {
+      overlay: {
+        errors: true,
+        warnings: false,
+      },
+    },
   },
   resolve: {
     extensions: ['.js'],
@@ -50,7 +62,13 @@ export default {
       },
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader', 'postcss-loader'],
+        use: [
+          process.env.NODE_ENV === 'production'
+            ? MiniCssExtractPlugin.loader
+            : 'style-loader',
+          'css-loader',
+          'postcss-loader',
+        ],
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
@@ -75,13 +93,9 @@ export default {
         useShortDoctype: true,
       },
     }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/css',
-          to: 'css',
-        },
-      ],
+    new MiniCssExtractPlugin({
+      filename: 'css/[name].[contenthash].css',
+      chunkFilename: 'css/[id].[contenthash].css',
     }),
   ],
 };
